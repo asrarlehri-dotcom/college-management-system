@@ -1071,47 +1071,28 @@
     return 'S-' + yearShort + '/' + progCode + ':' + seq;
   }
 
-  ddocument.getElementById('admissionForm').addEventListener('submit', async function(e) {
+  document.getElementById('admissionForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const rollNo = generateRollNo(program.value, session.value);
-    
     const record = {
-      id: newId(), 
-      rollNo: rollNo,
-      name: stuName.value, 
-      father: fatherName.value, 
-      cnic: cnic.value,
-      phone: phone.value, 
-      program: program.value, 
-      session: session.value,
+      id: newId(), rollNo: rollNo,
+      name: stuName.value, father: fatherName.value, cnic: cnic.value,
+      phone: phone.value, program: program.value, session: session.value,
       currentSemester: parseInt(currentSemester.value),
-      status: studentStatus.value // Local array mein status rahega
+      status: studentStatus.value
     };
-    
     admissions.push(record);
-    
-    // 👇 Yahan se `student_status` hata diya hai
-    const err = await sbInsert('admissions', { 
-      id: record.id, 
-      roll_no: record.rollNo, 
-      name: record.name, 
-      father: record.father,
-      cnic: record.cnic, 
-      phone: record.phone, 
-      program: record.program, 
-      session: record.session,
-      current_semester: record.currentSemester 
-    });
-    
+    const err = await sbInsert('admissions', { id: record.id, roll_no: record.rollNo, name: record.name, father: record.father,
+      cnic: record.cnic, phone: record.phone, program: record.program, session: record.session,
+      current_semester: record.currentSemester, student_status: record.status });
     this.reset();
     renderAll();
-    
     if (err) {
-      alert('⚠️ Saved locally, but CLOUD SAVE FAILED: ' + err.message);
+      alert('⚠️ Saved locally, but CLOUD SAVE FAILED: ' + err.message + '\n\nThis usually means the "student_status" column is missing — run alter_tables.sql in Supabase SQL Editor.');
     } else {
       alert('Admission submitted successfully! Roll No: ' + rollNo + (cloudEnabled ? ' (saved to cloud)' : ' (local only — cloud not connected)'));
     }
-});
+  });
 
   function deleteAdmission(i) {
     const record = admissions[i];
