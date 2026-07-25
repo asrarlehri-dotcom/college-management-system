@@ -1079,7 +1079,7 @@
       name: stuName.value, father: fatherName.value, cnic: cnic.value,
       phone: phone.value, program: program.value, session: session.value,
       currentSemester: parseInt(currentSemester.value),
-      status: studentStatus.value
+      
     };
     admissions.push(record);
     const err = await sbInsert('admissions', { id: record.id, roll_no: record.rollNo, name: record.name, father: record.father,
