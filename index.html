@@ -187,12 +187,10 @@
                   <option value="7">Semester 7</option><option value="8">Semester 8</option>
                 </select>
               </div>
-              <div class="form-group"><label>Student Status</label>
-                <select id="studentStatus" required>
-                  <option value="Active">Active (Enrolled)</option>
-                  <option value="Passed Out">Passed Out</option>
-                  <option value="Dropout">Dropout</option>
-                  <option value="Quit">Quit</option>
+              <div class="form-group"><label>Admission Fee</label>
+                <select id="admissionFeeStatus" required>
+                  <option value="Unpaid">Unpaid</option>
+                  <option value="Paid">Paid</option>
                 </select>
               </div>
             </div>
@@ -1079,16 +1077,31 @@
       name: stuName.value, father: fatherName.value, cnic: cnic.value,
       phone: phone.value, program: program.value, session: session.value,
       currentSemester: parseInt(currentSemester.value),
-      
+      status: 'Active' // kept locally for Dashboard stats; not sent to Supabase (no matching column needed)
     };
     admissions.push(record);
+
+    // NOTE: student_status is intentionally NOT sent to Supabase — that column kept
+    // causing "column not found" errors. Admission Fee status is now tracked instead,
+    // via a normal Fee Records entry (a table that's already working correctly).
     const err = await sbInsert('admissions', { id: record.id, roll_no: record.rollNo, name: record.name, father: record.father,
       cnic: record.cnic, phone: record.phone, program: record.program, session: record.session,
-      current_semester: record.currentSemester, student_status: record.status });
+      current_semester: record.currentSemester });
+
+    // Create the matching Admission Fee record (Paid/Unpaid, as selected on the form)
+    const feeAmount = (typeof feeSettings !== 'undefined' && feeSettings.admissionFee) ? feeSettings.admissionFee : 0;
+    const feeRecord = {
+      id: newId(), student: record.name, type: 'Admission Fee', semester: '-',
+      amount: feeAmount, dueDate: new Date().toISOString().split('T')[0], status: admissionFeeStatus.value
+    };
+    feeRecords.push(feeRecord);
+    await sbInsert('fee_records', { id: feeRecord.id, student: feeRecord.student, type: feeRecord.type,
+      semester: feeRecord.semester, amount: feeRecord.amount, due_date: feeRecord.dueDate, status: feeRecord.status });
+
     this.reset();
     renderAll();
     if (err) {
-      alert('⚠️ Saved locally, but CLOUD SAVE FAILED: ' + err.message + '\n\nThis usually means the "student_status" column is missing — run alter_tables.sql in Supabase SQL Editor.');
+      alert('⚠️ Saved locally, but CLOUD SAVE FAILED: ' + err.message);
     } else {
       alert('Admission submitted successfully! Roll No: ' + rollNo + (cloudEnabled ? ' (saved to cloud)' : ' (local only — cloud not connected)'));
     }
@@ -1350,7 +1363,7 @@
         if (tableName === 'admissions') {
           dbRows = newRows.map(a => ({ id: a.id, roll_no: a.rollNo || a.roll_no || '', name: a.name, father: a.father,
             cnic: a.cnic, phone: a.phone, program: a.program, session: a.session,
-            current_semester: a.currentSemester, student_status: a.status }));
+            current_semester: a.currentSemester }));
         } else {
           dbRows = newRows; // faculty / departments / courses use the same field names as their DB columns
         }
@@ -2481,8 +2494,7 @@
         db.from('courses').insert(newCourses),
         db.from('admissions').insert(newAdmissions.map(a => ({
           id: a.id, roll_no: a.rollNo, name: a.name, father: a.father, cnic: a.cnic,
-          phone: a.phone, program: a.program, session: a.session, current_semester: a.currentSemester,
-          student_status: a.status
+          phone: a.phone, program: a.program, session: a.session, current_semester: a.currentSemester
         })))
       ]);
       await db.from('exam_marks').insert(newExamMarks);
