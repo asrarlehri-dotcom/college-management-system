@@ -1114,11 +1114,91 @@
     renderAll();
   }
 
+  // ===== CLICK-TO-EDIT TABLE CELLS (Admission / Students) =====
+  // Click any Roll No / Name / Father / CNIC / Phone cell to edit it inline.
+  // Program & Session use a dropdown instead of free text, to keep values consistent
+  // with the rest of the app (filters elsewhere match these exact strings).
+
+  function editableCell(id, field, value) {
+    return `<span class="edit-cell" data-id="${id}" data-field="${field}" onclick="startEditCell(this)" style="cursor:pointer; border-bottom:1px dashed #c4b5fd;">${value || '-'}</span>`;
+  }
+
+  function editableSelectCell(id, field, value, optionsCSV) {
+    return `<span class="edit-cell-select" data-id="${id}" data-field="${field}" data-options="${optionsCSV}" onclick="startEditSelect(this)" style="cursor:pointer; border-bottom:1px dashed #c4b5fd;">${value || '-'}</span>`;
+  }
+
+  function startEditCell(el) {
+    const id = el.dataset.id, field = el.dataset.field;
+    const admission = admissions.find(a => a.id === id);
+    const currentVal = admission ? (admission[field] || '') : '';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentVal;
+    input.style.cssText = 'width:120px; padding:4px 6px; border:1px solid #6d28d9; border-radius:4px; font-size:13px;';
+    el.replaceWith(input);
+    input.focus();
+    input.select();
+
+    let committed = false;
+    const commit = () => { if (!committed) { committed = true; saveEditCell(id, field, input.value); } };
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') input.blur();
+      if (ev.key === 'Escape') { committed = true; renderAll(); }
+    });
+  }
+
+  function startEditSelect(el) {
+    const id = el.dataset.id, field = el.dataset.field;
+    const options = el.dataset.options.split('|');
+    const admission = admissions.find(a => a.id === id);
+    const currentVal = admission ? (admission[field] || '') : '';
+
+    const select = document.createElement('select');
+    select.style.cssText = 'padding:4px 6px; border:1px solid #6d28d9; border-radius:4px; font-size:13px;';
+    options.forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt; o.textContent = opt;
+      if (opt === currentVal) o.selected = true;
+      select.appendChild(o);
+    });
+    el.replaceWith(select);
+    select.focus();
+
+    let committed = false;
+    select.addEventListener('change', () => { committed = true; saveEditCell(id, field, select.value); });
+    select.addEventListener('blur', () => { if (!committed) renderAll(); });
+  }
+
+  function saveEditCell(id, field, newValue) {
+    const admission = admissions.find(a => a.id === id);
+    if (!admission) { renderAll(); return; }
+    admission[field] = newValue.trim();
+
+    const dbFieldMap = { rollNo: 'roll_no', name: 'name', father: 'father', cnic: 'cnic', phone: 'phone', program: 'program', session: 'session' };
+    const dbField = dbFieldMap[field] || field;
+    sbUpdate('admissions', id, { [dbField]: admission[field] });
+
+    renderAll();
+  }
+
+  const PROGRAM_OPTIONS = 'BS Computer Science|BS Mathematics|BS Physics|BS Chemistry|BS English';
+  const SESSION_OPTIONS = '2024-2028|2025-2029|2026-2030';
+
   function renderAdmissions() {
 
     admissionTable.innerHTML = admissions.map((a,i) => `
-      <tr><td><b>${a.rollNo || '-'}</b></td><td>${a.name}</td><td>${a.father}</td><td>${a.cnic}</td><td>${a.phone}</td><td>${a.program}</td><td>${a.session}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="deleteAdmission(${i})">Delete</button></td></tr>
+      <tr>
+        <td><b>${editableCell(a.id, 'rollNo', a.rollNo)}</b></td>
+        <td>${editableCell(a.id, 'name', a.name)}</td>
+        <td>${editableCell(a.id, 'father', a.father)}</td>
+        <td>${editableCell(a.id, 'cnic', a.cnic)}</td>
+        <td>${editableCell(a.id, 'phone', a.phone)}</td>
+        <td>${editableSelectCell(a.id, 'program', a.program, PROGRAM_OPTIONS)}</td>
+        <td>${editableSelectCell(a.id, 'session', a.session, SESSION_OPTIONS)}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteAdmission(${i})">Delete</button></td>
+      </tr>
     `).join('') || `<tr class="empty-row"><td colspan="8">No records yet.</td></tr>`;
 
     recentAdmissionsTable.innerHTML = admissions.slice(-5).reverse().map(a => `
@@ -1134,9 +1214,17 @@
       const sem = a.currentSemester || 1;
       const canPromote = sem < 8;
       return `
-      <tr><td><b>${a.rollNo || '-'}</b></td><td>${a.name}</td><td>${a.father}</td><td>${a.cnic}</td><td>${a.phone}</td><td>${a.program}</td><td>${a.session}</td>
-      <td>Semester ${sem}</td>
-      <td>${canPromote ? `<button class="btn btn-sm" onclick="promoteStudent(${i})">⬆ Promote</button>` : `<span style="color:#9ca3af; font-size:12px;">Final Semester</span>`}</td></tr>
+      <tr>
+        <td><b>${editableCell(a.id, 'rollNo', a.rollNo)}</b></td>
+        <td>${editableCell(a.id, 'name', a.name)}</td>
+        <td>${editableCell(a.id, 'father', a.father)}</td>
+        <td>${editableCell(a.id, 'cnic', a.cnic)}</td>
+        <td>${editableCell(a.id, 'phone', a.phone)}</td>
+        <td>${editableSelectCell(a.id, 'program', a.program, PROGRAM_OPTIONS)}</td>
+        <td>${editableSelectCell(a.id, 'session', a.session, SESSION_OPTIONS)}</td>
+        <td>Semester ${sem}</td>
+        <td>${canPromote ? `<button class="btn btn-sm" onclick="promoteStudent(${i})">⬆ Promote</button>` : `<span style="color:#9ca3af; font-size:12px;">Final Semester</span>`}</td>
+      </tr>
     `;
     }).join('') || `<tr class="empty-row"><td colspan="9">No students found.</td></tr>`;
   }
@@ -1332,23 +1420,55 @@
     setTimeout(function() { win.print(); }, 400);
   }
 
+  // Maps many possible CSV header spellings to the exact internal field name we use.
+  // Prevents column-shift bugs when someone's CSV has slightly different header text/casing.
+  const CSV_HEADER_ALIASES = {
+    admissions: {
+      'rollno': 'rollNo', 'roll no': 'rollNo', 'roll_no': 'rollNo', 'roll-no': 'rollNo',
+      'name': 'name', 'studentname': 'name', 'student name': 'name',
+      'father': 'father', 'fathername': 'father', 'father name': 'father', 'f/name': 'father',
+      'cnic': 'cnic', 'cnic/b-form': 'cnic', 'bform': 'cnic',
+      'phone': 'phone', 'contact': 'phone', 'contact no': 'phone', 'contactno': 'phone', 'mobile': 'phone',
+      'program': 'program', 'bs program': 'program',
+      'session': 'session',
+      'currentsemester': 'currentSemester', 'current semester': 'currentSemester', 'semester': 'currentSemester'
+    }
+  };
+
+  function normalizeCSVHeader(h, tableName) {
+    const clean = h.toLowerCase().trim();
+    const aliasMap = CSV_HEADER_ALIASES[tableName];
+    if (aliasMap && aliasMap[clean]) return aliasMap[clean];
+    return h.trim(); // fall back to the header as-written for tables without an alias map (faculty/departments/courses)
+  }
+
   function importCSV(event, targetArray, renderFn, tableName) {
     const file = event.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async function(e) {
       const lines = e.target.result.split(/\r?\n/).filter(l => l.trim() !== '');
-      const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
+      const rawHeaders = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
+      const headers = rawHeaders.map(h => normalizeCSVHeader(h, tableName));
       const newRows = [];
 
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].match(/(".*?"|[^,]+)(?=,|$)/g).map(v => v.replace(/^"|"$/g,'').trim());
+        // Skip a row if its column count doesn't match the header count — this is exactly
+        // what causes silent column-shift bugs, so we reject it instead of guessing.
+        if (values.length !== headers.length) { console.warn('Skipped malformed CSV row (column count mismatch):', lines[i]); continue; }
+
         const obj = { id: newId() };
         headers.forEach((h, idx) => obj[h] = values[idx] || '');
 
         // Type-coerce fields that must be numbers, so calculations elsewhere don't break
         if (tableName === 'courses') { obj.credit = parseFloat(obj.credit) || 3; obj.semester = parseInt(obj.semester) || 1; }
-        if (tableName === 'admissions') { obj.currentSemester = parseInt(obj.currentSemester) || 1; if (!obj.status) obj.status = 'Active'; }
+        if (tableName === 'admissions') {
+          obj.currentSemester = parseInt(obj.currentSemester) || 1;
+          // Roll No is always auto-generated (matches the same format as the Admission form),
+          // regardless of whether the CSV included one — keeps numbering consistent and avoids blanks.
+          obj.rollNo = generateRollNo(obj.program, obj.session);
+        }
 
         targetArray.push(obj);
         newRows.push(obj);
@@ -1357,11 +1477,16 @@
       renderFn();
       event.target.value = '';
 
+      if (!newRows.length) {
+        alert('No valid rows were imported. Check that your CSV has the right number of columns matching its header row.');
+        return;
+      }
+
       // Sync the imported rows to Supabase too, mapping field names to the DB's column names
       if (cloudEnabled && tableName && newRows.length) {
         let dbRows = [];
         if (tableName === 'admissions') {
-          dbRows = newRows.map(a => ({ id: a.id, roll_no: a.rollNo || a.roll_no || '', name: a.name, father: a.father,
+          dbRows = newRows.map(a => ({ id: a.id, roll_no: a.rollNo, name: a.name, father: a.father,
             cnic: a.cnic, phone: a.phone, program: a.program, session: a.session,
             current_semester: a.currentSemester }));
         } else {
