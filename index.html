@@ -1,0 +1,2731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>College Management System</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+  body { display:flex; height:100vh; background:#f5f6fa; }
+
+  .sidebar { width: 250px; background:#fff; border-right:1px solid #e5e7eb; padding:20px 0; overflow-y:auto; }
+  .sidebar .brand { padding: 0 20px 20px 20px; border-bottom:1px solid #eee; margin-bottom:10px; }
+  .sidebar .brand h2 { font-size:18px; color:#1f2937; }
+  .sidebar .brand p { font-size:12px; color:#9ca3af; }
+
+  .menu-item { display:flex; align-items:center; gap:10px; padding:12px 20px; color:#4b5563; cursor:pointer; font-size:14px; }
+  .menu-item:hover { background:#f3f4f6; }
+  .menu-item.active { background:#ede9fe; color:#6d28d9; font-weight:600; border-right:3px solid #6d28d9; }
+
+  .main { flex:1; overflow-y:auto; }
+  .topbar { background:#fff; padding:15px 30px; border-bottom:1px solid #e5e7eb; color:#6b7280; font-size:14px; }
+  .content { padding:30px; }
+  .content h1 { font-size:24px; color:#111827; margin-bottom:5px; }
+  .content .subtitle { color:#9ca3af; font-size:13px; margin-bottom:25px; }
+
+  .stats { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:15px; margin-bottom:30px; }
+  .stat-card { background:#fff; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
+  .stat-card .label { font-size:13px; color:#9ca3af; margin-bottom:8px; }
+  .stat-card .value { font-size:26px; font-weight:700; color:#111827; }
+
+  .panel { background:#fff; border-radius:10px; padding:20px 25px; box-shadow:0 1px 3px rgba(0,0,0,0.05); margin-bottom:25px; }
+  .panel-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px; }
+  .panel h3 { font-size:16px; color:#111827; }
+
+  .form-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:15px; }
+  .form-group label { display:block; font-size:13px; color:#374151; margin-bottom:6px; }
+  .form-group input, .form-group select { width:100%; padding:9px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; }
+
+  .btn { background:#6d28d9; color:#fff; border:none; padding:9px 16px; border-radius:6px; font-size:13px; cursor:pointer; margin-top:10px; }
+  .btn:hover { background:#5b21b6; }
+  .btn-outline { background:#fff; color:#6d28d9; border:1px solid #6d28d9; }
+  .btn-outline:hover { background:#f5f3ff; }
+  .btn-sm { padding:5px 10px; font-size:12px; margin-top:0; }
+  .btn-danger { background:#dc2626; }
+  .btn-danger:hover { background:#b91c1c; }
+  .btn-row { display:flex; gap:10px; flex-wrap:wrap; }
+
+  table { width:100%; border-collapse:collapse; margin-top:10px; }
+  th, td { text-align:left; padding:10px; font-size:13px; border-bottom:1px solid #f0f0f0; }
+  th { color:#9ca3af; font-weight:600; }
+  .empty-row td { color:#9ca3af; }
+
+  .page { display:none; }
+  .page.active { display:block; }
+
+  #admissionImport, #studentsImport, #facultyImport, #deptImport, #courseImport { display:none; }
+  .search-box { padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; width:220px; }
+
+  .attendance-table td, .attendance-table th { text-align:center; }
+  .attendance-table td:first-child, .attendance-table th:first-child { text-align:left; }
+  .att-btn { padding:4px 10px; border-radius:5px; border:none; font-size:12px; cursor:pointer; }
+  .att-present { background:#d1fae5; color:#059669; }
+  .att-absent { background:#fee2e2; color:#dc2626; }
+</style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <div class="brand" id="brandBox">
+      <img id="collegeLogoImg" src="" style="display:none; max-width:60px; max-height:60px; margin-bottom:8px;">
+      <h2 id="collegeNameSidebar">My College</h2>
+      <p>Management System</p>
+    </div>
+    <div class="menu-item active" onclick="showPage('dashboard', this)">📊 Dashboard</div>
+    <div class="menu-item" onclick="showPage('admission', this)">📝 Admission</div>
+    <div class="menu-item" onclick="showPage('fee', this)">💰 Fee</div>
+    <div class="menu-item" onclick="showPage('students', this)">🎓 Students</div>
+    <div class="menu-item" onclick="showPage('faculty', this)">👨‍🏫 Faculty</div>
+    <div class="menu-item" onclick="showPage('departments', this)">🏢 Departments</div>
+    <div class="menu-item" onclick="showPage('courses', this)">📚 Courses</div>
+    <div class="menu-item" onclick="showPage('attendance', this)">🗓 Attendance</div>
+    <div class="menu-item" onclick="showPage('exams', this)">📄 Exams &amp; Marks</div>
+    <div class="menu-item" onclick="showPage('addresult', this)">📥 Add Result</div>
+    <div class="menu-item" onclick="showPage('timetable', this)">⏰ Timetable</div>
+    <div class="menu-item" onclick="showPage('datesheet', this)">🗒 Datesheet</div>
+    <div class="menu-item" onclick="showPage('merit', this)">🏆 Merit &amp; Results</div>
+    <div class="menu-item" onclick="showPage('reports', this)">📈 Reports</div>
+    <div class="menu-item" onclick="showPage('users', this)">👥 Users</div>
+    <div class="menu-item" onclick="showPage('settings', this)">⚙️ Settings</div>
+  </div>
+
+  <div class="main">
+    <div class="topbar" style="display:flex; justify-content:space-between; align-items:center;">
+      <span id="topbarText">My College — Sariab Road, Quetta</span>
+      <span style="font-size:13px; color:#6b7280; font-weight:500;">👤 Signed in as Super Admin</span>
+    </div>
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div id="dashboard" class="page active">
+        <h1>Dashboard</h1>
+        <div class="panel" id="cloudStatusPanel" style="background:#fee2e2; display:none;">
+          <h3 id="cloudStatusText">🔴 Checking cloud connection...</h3>
+        </div>
+
+        <div class="panel">
+          <h3>Featured Profiles</h3>
+          <p style="font-size:12px; color:#9ca3af; margin-bottom:10px;">Editable from Settings → Featured Profiles.</p>
+          <div id="profileCardsGrid" style="display:flex; flex-direction:row; flex-wrap:wrap; gap:10px;"></div>
+        </div>
+
+        <div class="stats">
+          <div class="stat-card"><div class="label">Total Students</div><div class="value" id="statTotalStudents">0</div></div>
+          <div class="stat-card"><div class="label">Total Subjects</div><div class="value" id="statTotalSubjects">0</div></div>
+          <div class="stat-card"><div class="label">Total Programs</div><div class="value" id="statTotalPrograms">0</div></div>
+          <div class="stat-card"><div class="label">Total Departments</div><div class="value" id="statTotalDepartments">0</div></div>
+          <div class="stat-card"><div class="label">Total Faculty</div><div class="value" id="statTotalFaculty">0</div></div>
+          <div class="stat-card"><div class="label">Total Enrolled (All)</div><div class="value" id="statEnrolledAll">0</div></div>
+          <div class="stat-card"><div class="label">Total Enrolled (Current)</div><div class="value" id="statEnrolledCurrent">0</div></div>
+          <div class="stat-card"><div class="label">Total Passed Out</div><div class="value" id="statPassedOut">0</div></div>
+          <div class="stat-card"><div class="label">Total Dropout</div><div class="value" id="statDropout">0</div></div>
+          <div class="stat-card"><div class="label">Total Quit Students</div><div class="value" id="statQuit">0</div></div>
+          <div class="stat-card"><div class="label">Pending Results</div><div class="value" id="statPendingResults" style="color:#dc2626;">0</div></div>
+          <div class="stat-card"><div class="label">Fee &amp; Dues</div><div class="value" id="statFeeDues" style="color:#dc2626;">Rs. 0</div></div>
+        </div>
+
+        <div class="panel">
+          <h3>Quick Access</h3>
+          <div class="btn-row">
+            <button class="btn" onclick="document.querySelector('.menu-item[onclick*=addresult]').click()">📥 Add Result</button>
+            <button class="btn" onclick="document.querySelector('.menu-item[onclick*=datesheet]').click()">🗒 Datesheet</button>
+            <button class="btn" onclick="document.querySelector('.menu-item[onclick*=timetable]').click()">⏰ Timetable</button>
+            <button class="btn" onclick="document.querySelector('.menu-item[onclick*=attendance]').click()">🗓 Attendance</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Recent Admissions</h3>
+          <table>
+            <thead><tr><th>Name</th><th>Program</th><th>Session</th><th>Status</th></tr></thead>
+            <tbody id="recentAdmissionsTable"><tr class="empty-row"><td colspan="4">No admissions yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ADMISSION -->
+      <div id="admission" class="page">
+        <h1>Admission</h1>
+        <p class="subtitle">Register a new student</p>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Import Students (CSV)</h3>
+            <div class="btn-row">
+              <button class="btn btn-outline btn-sm" onclick="document.getElementById('admissionImport').click()">⬆ Import CSV</button>
+              <input type="file" id="admissionImport" accept=".csv" onchange="importCSV(event, admissions, renderAll, 'admissions')">
+            </div>
+          </div>
+          <p style="font-size:12px; color:#9ca3af;">CSV columns must be: name, father, cnic, phone, program, session</p>
+        </div>
+
+        <div class="panel">
+          <h3>New Admission Form</h3>
+          <form id="admissionForm">
+            <div class="form-grid">
+              <div class="form-group"><label>Full Name</label><input type="text" id="stuName" required></div>
+              <div class="form-group"><label>Father Name</label><input type="text" id="fatherName" required></div>
+              <div class="form-group"><label>CNIC / B-Form</label><input type="text" id="cnic" required></div>
+              <div class="form-group"><label>Contact Number</label><input type="text" id="phone" required></div>
+              <div class="form-group"><label>Program</label>
+                <select id="program" required>
+                  <option value="">-- select --</option>
+                  <option>BS Computer Science</option><option>BS Mathematics</option>
+                  <option>BS Physics</option><option>BS Chemistry</option><option>BS English</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Session</label>
+                <select id="session" required>
+                  <option value="">-- select --</option>
+                  <option>2024-2028</option><option>2025-2029</option><option>2026-2030</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Current Semester</label>
+                <select id="currentSemester" required>
+                  <option value="1">Semester 1</option><option value="2">Semester 2</option>
+                  <option value="3">Semester 3</option><option value="4">Semester 4</option>
+                  <option value="5">Semester 5</option><option value="6">Semester 6</option>
+                  <option value="7">Semester 7</option><option value="8">Semester 8</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Student Status</label>
+                <select id="studentStatus" required>
+                  <option value="Active">Active (Enrolled)</option>
+                  <option value="Passed Out">Passed Out</option>
+                  <option value="Dropout">Dropout</option>
+                  <option value="Quit">Quit</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="btn">➕ Submit Admission</button>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>All Admissions</h3>
+            <div class="btn-row">
+              <button class="btn btn-outline btn-sm" onclick="exportCSV(admissions, 'admissions.csv')">⬇ Export CSV</button>
+              <button class="btn btn-outline btn-sm" onclick="exportPDF(admissions, 'Admissions List')">🖨 Export PDF</button>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Roll No</th><th>Name</th><th>Father</th><th>CNIC</th><th>Phone</th><th>Program</th><th>Session</th><th>Action</th></tr></thead>
+            <tbody id="admissionTable"><tr class="empty-row"><td colspan="8">No records yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- FEE -->
+      <div id="fee" class="page">
+        <h1>Fee</h1>
+        <p class="subtitle">Manage student fee vouchers &amp; payments</p>
+
+        <div class="panel" style="background:#ede9fe;">
+          <h3>⚡ Auto-Generate Fee (based on locked Fee Structure)</h3>
+          <p style="font-size:13px; color:#6b7280; margin-bottom:10px;">
+            Creates Admission Fee + Semester Fee for every student. Semesters the student has already reached become <b>Pending (Unpaid)</b>;
+            semesters not reached yet show as <b>Not Due Yet</b> (amount visible, excluded from pending total).
+          </p>
+          <button class="btn" onclick="generateFeeForAllStudents()">⚡ Generate Fee for All Students</button>
+        </div>
+
+        <div class="panel">
+          <h3>Add Fee Record (Manual / One-off)</h3>
+          <form id="feeForm">
+            <div class="form-grid">
+              <div class="form-group"><label>Student</label>
+                <select id="feeStudent" required><option value="">-- select student --</option></select>
+              </div>
+              <div class="form-group"><label>Fee Type</label>
+                <select id="feeType" required>
+                  <option value="">-- select --</option>
+                  <option>Admission Fee</option><option>Tuition Fee</option>
+                  <option>Examination Fee</option><option>Library Fee</option>
+                  <option>Hostel Fee</option><option>Miscellaneous</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Semester</label>
+                <select id="feeSemester" required>
+                  <option value="">-- select --</option>
+                  <option>1</option><option>2</option><option>3</option><option>4</option>
+                  <option>5</option><option>6</option><option>7</option><option>8</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Amount (Rs.)</label><input type="number" id="feeAmount" min="0" required></div>
+              <div class="form-group"><label>Due Date</label><input type="date" id="feeDueDate" required></div>
+              <div class="form-group"><label>Status</label>
+                <select id="feeStatus" required><option>Unpaid</option><option>Paid</option></select>
+              </div>
+            </div>
+            <button type="submit" class="btn">➕ Add Fee Record</button>
+          </form>
+        </div>
+
+        <div class="panel" style="background:#fef3c7;">
+          <h3>🔍 Fee Status Report</h3>
+          <p style="font-size:13px; color:#6b7280; margin-bottom:10px;">Select a Student, Program, and/or Session to see exactly how much is Paid, Unpaid (Pending), and Not Yet Due.</p>
+          <div class="form-grid">
+            <div class="form-group"><label>Student</label>
+              <select id="feeReportStudent"><option value="">All students</option></select>
+            </div>
+            <div class="form-group"><label>Program / Department</label>
+              <select id="feeReportProgram">
+                <option value="">All programs</option>
+                <option>BS Computer Science</option><option>BS Mathematics</option>
+                <option>BS Physics</option><option>BS Chemistry</option><option>BS English</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Session</label>
+              <select id="feeReportSession">
+                <option value="">All sessions</option>
+                <option>2024-2028</option><option>2025-2029</option><option>2026-2030</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn" onclick="renderFeeStatusReport()">🔍 Show Status</button>
+
+          <div class="stats" style="margin-top:15px;">
+            <div class="stat-card"><div class="label">Total Paid</div><div class="value" id="feeReportPaid" style="color:#059669;">Rs. 0</div></div>
+            <div class="stat-card"><div class="label">Total Unpaid / Dues</div><div class="value" id="feeReportUnpaid" style="color:#dc2626;">Rs. 0</div></div>
+            <div class="stat-card"><div class="label">Not Yet Due</div><div class="value" id="feeReportUpcoming" style="color:#9ca3af;">Rs. 0</div></div>
+            <div class="stat-card"><div class="label">Grand Total</div><div class="value" id="feeReportTotal">Rs. 0</div></div>
+          </div>
+
+          <table style="margin-top:15px;">
+            <thead><tr><th>Student</th><th>Fee Type</th><th>Semester</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody id="feeReportTable"><tr class="empty-row"><td colspan="5">Select filters and click "Show Status".</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Fee Records</h3>
+            <div class="btn-row">
+              <span style="font-size:13px; color:#6b7280; margin-right:10px;">Total Collected: Rs. <b id="feeTotalCollected">0</b> &nbsp; | &nbsp; Pending: Rs. <b id="feeTotalPending" style="color:#dc2626;">0</b></span>
+              <button class="btn btn-outline btn-sm" onclick="exportCSV(feeRecords, 'fee_records.csv')">⬇ Export CSV</button>
+              <button class="btn btn-outline btn-sm" onclick="exportPDF(feeRecords, 'Fee Records')">🖨 Export PDF</button>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Student</th><th>Fee Type</th><th>Semester</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="feeTable"><tr class="empty-row"><td colspan="7">No fee records yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- STUDENTS -->
+      <div id="students" class="page">
+        <h1>Students</h1>
+        <p class="subtitle">All admitted students (auto-added from Admission)</p>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Student List</h3>
+            <div class="btn-row">
+              <input type="text" class="search-box" id="studentSearch" placeholder="Search by name/program..." oninput="renderStudents()">
+              <button class="btn btn-outline btn-sm" onclick="document.getElementById('studentsImport').click()">⬆ Import CSV</button>
+              <input type="file" id="studentsImport" accept=".csv" onchange="importCSV(event, admissions, renderAll, 'admissions')">
+              <button class="btn btn-outline btn-sm" onclick="exportCSV(admissions, 'students.csv')">⬇ Export CSV</button>
+              <button class="btn btn-outline btn-sm" onclick="exportPDF(admissions, 'Students List')">🖨 Export PDF</button>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Roll No</th><th>Name</th><th>Father</th><th>CNIC</th><th>Phone</th><th>Program</th><th>Session</th><th>Semester</th><th>Action</th></tr></thead>
+            <tbody id="studentsTable"><tr class="empty-row"><td colspan="9">No students yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- FACULTY -->
+      <div id="faculty" class="page">
+        <h1>Faculty</h1>
+        <p class="subtitle">Manage faculty members</p>
+        <div class="panel">
+          <h3>Add Faculty</h3>
+          <form id="facultyForm">
+            <div class="form-grid">
+              <div class="form-group"><label>Full Name</label><input type="text" id="facName" required></div>
+              <div class="form-group"><label>Designation</label><input type="text" id="facDesignation" placeholder="e.g. Assistant Professor" required></div>
+              <div class="form-group"><label>Department</label><input type="text" id="facDept" required></div>
+              <div class="form-group"><label>Contact</label><input type="text" id="facPhone" required></div>
+              <div class="form-group"><label>Email</label><input type="email" id="facEmail" required></div>
+            </div>
+            <button type="submit" class="btn">➕ Add Faculty</button>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Faculty List</h3>
+            <div class="btn-row">
+              <button class="btn btn-outline btn-sm" onclick="document.getElementById('facultyImport').click()">⬆ Import CSV</button>
+              <input type="file" id="facultyImport" accept=".csv" onchange="importCSV(event, faculty, renderFaculty, 'faculty')">
+              <button class="btn btn-outline btn-sm" onclick="exportCSV(faculty, 'faculty.csv')">⬇ Export CSV</button>
+              <button class="btn btn-outline btn-sm" onclick="exportPDF(faculty, 'Faculty List')">🖨 Export PDF</button>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Name</th><th>Designation</th><th>Department</th><th>Contact</th><th>Email</th><th>Action</th></tr></thead>
+            <tbody id="facultyTable"><tr class="empty-row"><td colspan="6">No faculty yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- DEPARTMENTS -->
+      <div id="departments" class="page">
+        <h1>Departments</h1>
+        <p class="subtitle">Manage college departments</p>
+        <div class="panel">
+          <h3>Add Department</h3>
+          <form id="deptForm">
+            <div class="form-grid">
+              <div class="form-group"><label>Department Name</label><input type="text" id="deptName" required></div>
+              <div class="form-group"><label>Department Code</label><input type="text" id="deptCode" required></div>
+              <div class="form-group"><label>Head of Department (HOD)</label><input type="text" id="deptHOD" required></div>
+            </div>
+            <button type="submit" class="btn">➕ Add Department</button>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Department List</h3>
+            <div class="btn-row">
+              <button class="btn btn-outline btn-sm" onclick="document.getElementById('deptImport').click()">⬆ Import CSV</button>
+              <input type="file" id="deptImport" accept=".csv" onchange="importCSV(event, departments, renderDepartments, 'departments')">
+              <button class="btn btn-outline btn-sm" onclick="exportCSV(departments, 'departments.csv')">⬇ Export CSV</button>
+              <button class="btn btn-outline btn-sm" onclick="exportPDF(departments, 'Departments List')">🖨 Export PDF</button>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Name</th><th>Code</th><th>HOD</th><th>Action</th></tr></thead>
+            <tbody id="departmentsTable"><tr class="empty-row"><td colspan="4">No departments yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- COURSES -->
+      <div id="courses" class="page">
+        <h1>Courses</h1>
+        <p class="subtitle">Manage courses / subjects</p>
+        <div class="panel">
+          <h3>Add Course</h3>
+          <form id="courseForm">
+            <div class="form-grid">
+              <div class="form-group"><label>Course Name</label><input type="text" id="courseName" required></div>
+              <div class="form-group"><label>Course Code</label><input type="text" id="courseCode" required></div>
+              <div class="form-group"><label>Credit Hours</label><input type="number" id="courseCredit" min="1" max="6" required></div>
+              <div class="form-group"><label>Department</label><input type="text" id="courseDept" required></div>
+              <div class="form-group"><label>Semester</label>
+                <select id="courseSemester" required>
+                  <option value="">-- select --</option>
+                  <option>1</option><option>2</option><option>3</option><option>4</option>
+                  <option>5</option><option>6</option><option>7</option><option>8</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="btn">➕ Add Course</button>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Course List</h3>
+            <div class="btn-row">
+              <button class="btn btn-outline btn-sm" onclick="document.getElementById('courseImport').click()">⬆ Import CSV</button>
+              <input type="file" id="courseImport" accept=".csv" onchange="importCSV(event, courses, renderCourses, 'courses')">
+              <button class="btn btn-outline btn-sm" onclick="exportCSV(courses, 'courses.csv')">⬇ Export CSV</button>
+              <button class="btn btn-outline btn-sm" onclick="exportPDF(courses, 'Courses List')">🖨 Export PDF</button>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Name</th><th>Code</th><th>Credit Hrs</th><th>Department</th><th>Semester</th><th>Action</th></tr></thead>
+            <tbody id="coursesTable"><tr class="empty-row"><td colspan="6">No courses yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ATTENDANCE -->
+      <div id="attendance" class="page">
+        <h1>Attendance</h1>
+        <p class="subtitle">Mark daily attendance for students</p>
+        <div class="panel">
+          <div class="form-grid">
+            <div class="form-group"><label>Date</label><input type="date" id="attDate"></div>
+            <div class="form-group"><label>Course</label>
+              <select id="attCourse"><option value="">-- select course --</option></select>
+            </div>
+          </div>
+          <button class="btn" onclick="loadAttendanceSheet()">📋 Load Attendance Sheet</button>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Attendance Sheet</h3>
+            <button class="btn btn-outline btn-sm" onclick="exportAttendance()">⬇ Export CSV</button>
+          </div>
+          <table class="attendance-table">
+            <thead><tr><th>Student Name</th><th>Program</th><th>Status</th></tr></thead>
+            <tbody id="attendanceTable"><tr class="empty-row"><td colspan="3">Select date & course, then click "Load Attendance Sheet".</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- EXAMS & MARKS -->
+      <div id="exams" class="page">
+        <h1>Exams &amp; Marks</h1>
+        <p class="subtitle">Enter marks — GPA is calculated automatically</p>
+
+        <div class="panel">
+          <h3>Add / Enter Marks</h3>
+          <form id="marksForm">
+            <div class="form-grid">
+              <div class="form-group"><label>Student</label>
+                <select id="markStudent" required onchange="autoFillProgram()"><option value="">-- select student --</option></select>
+              </div>
+              <div class="form-group"><label>Course</label>
+                <select id="markCourse" required onchange="autoFillCredit()"><option value="">-- select course --</option></select>
+              </div>
+              <div class="form-group"><label>Semester</label>
+                <select id="markSemester" required>
+                  <option value="">-- select --</option>
+                  <option>1</option><option>2</option><option>3</option><option>4</option>
+                  <option>5</option><option>6</option><option>7</option><option>8</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Credit Hours</label><input type="number" id="markCredit" min="1" max="6" required></div>
+              <div class="form-group"><label>Entry Type</label>
+                <select id="entryType" onchange="toggleEntryType()">
+                  <option value="total">Total Marks /100</option>
+                  <option value="component">Assignment + Mid + Final</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-grid" id="totalEntryBox">
+              <div class="form-group"><label>Total Marks (/100)</label><input type="number" id="totalMarks" min="0" max="100"></div>
+            </div>
+
+            <div class="form-grid" id="componentEntryBox" style="display:none;">
+              <div class="form-group"><label>Assignment (/20)</label><input type="number" id="markAssignment" min="0" max="20"></div>
+              <div class="form-group"><label>Mid Term (/30)</label><input type="number" id="markMid" min="0" max="30"></div>
+              <div class="form-group"><label>Final Term (/50)</label><input type="number" id="markFinal" min="0" max="50"></div>
+            </div>
+
+            <button type="submit" class="btn">➕ Save Marks</button>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3>All Marks Records</h3>
+            <button class="btn btn-outline btn-sm" onclick="exportCSV(examMarks, 'marks.csv')">⬇ Export CSV</button>
+            <button class="btn btn-outline btn-sm" onclick="exportPDF(examMarks, 'Exam Marks')">🖨 Export PDF</button>
+          </div>
+          <table>
+            <thead><tr><th>Student</th><th>Course</th><th>Sem</th><th>CH</th><th>Marks</th><th>%</th><th>GP</th><th>Grade</th><th>Action</th></tr></thead>
+            <tbody id="marksTable"><tr class="empty-row"><td colspan="9">No marks entered yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ADD RESULT (bulk entry) -->
+      <div id="addresult" class="page">
+        <h1>Add Result</h1>
+        <p class="subtitle">Enter Sub Total /100 marks for a course — select session, program, semester and course.</p>
+
+        <div class="panel">
+          <div class="form-grid">
+            <div class="form-group"><label>Session</label>
+              <select id="arSession" onchange="loadAddResultSheet()">
+                <option value="">-- select --</option>
+                <option>2024-2028</option><option>2025-2029</option><option>2026-2030</option>
+              </select>
+            </div>
+            <div class="form-group"><label>BS Program</label>
+              <select id="arProgram" onchange="loadAddResultSheet()">
+                <option value="">-- select --</option>
+                <option>BS Computer Science</option><option>BS Mathematics</option>
+                <option>BS Physics</option><option>BS Chemistry</option><option>BS English</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Semester</label>
+              <select id="arSemester" onchange="populateAddResultCourses(); loadAddResultSheet();">
+                <option value="">-- select --</option>
+                <option>1</option><option>2</option><option>3</option><option>4</option>
+                <option>5</option><option>6</option><option>7</option><option>8</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Course</label>
+              <select id="arCourse" onchange="autoFillArCredit(); loadAddResultSheet();"><option value="">-- select course --</option></select>
+            </div>
+            <div class="form-group"><label>Credit Hours</label>
+              <input type="number" id="arCredit" min="1" max="6" placeholder="auto-fills from course">
+            </div>
+            <div class="form-group"><label>Entry Type</label>
+              <select id="arEntryType" onchange="loadAddResultSheet()">
+                <option value="total">Total /100</option>
+                <option value="component">Assignment/Quiz + Mid + Final</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Add Result</h3>
+            <span id="arCount" style="font-size:13px; color:#9ca3af;"></span>
+          </div>
+          <table>
+            <thead id="addResultHead"><tr><th>Roll No</th><th>Student</th><th>Sub Total /100</th></tr></thead>
+            <tbody id="addResultTable"><tr class="empty-row"><td colspan="3">Select session, program, semester and course to load students.</td></tr></tbody>
+          </table>
+          <button class="btn" style="margin-top:15px;" onclick="saveAddResult()">💾 Save Result</button>
+        </div>
+      </div>
+
+      <!-- REPORTS -->
+      <div id="reports" class="page">
+        <h1>Reports</h1>
+        <p class="subtitle">Official documents: transcripts, pass/fail lists, and GPA/CGPA summary</p>
+
+        <div class="panel">
+          <h3>Academic Transcript</h3>
+          <div class="form-grid">
+            <div class="form-group"><label>Student</label>
+              <select id="transcriptStudent"><option value="">-- select student --</option></select>
+            </div>
+            <div class="form-group"><label>From Semester</label>
+              <select id="transcriptFrom">
+                <option value="1">Semester 1</option><option value="2">Semester 2</option><option value="3">Semester 3</option>
+                <option value="4">Semester 4</option><option value="5">Semester 5</option><option value="6">Semester 6</option>
+                <option value="7">Semester 7</option><option value="8">Semester 8</option>
+              </select>
+            </div>
+            <div class="form-group"><label>To Semester</label>
+              <select id="transcriptTo">
+                <option value="1">Semester 1</option><option value="2">Semester 2</option><option value="3">Semester 3</option>
+                <option value="4">Semester 4</option><option value="5">Semester 5</option><option value="6">Semester 6</option>
+                <option value="7">Semester 7</option><option value="8" selected>Semester 8</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn" onclick="generateTranscript()">📄 Generate Transcript (Print / Save as PDF)</button>
+        </div>
+
+        <div class="panel">
+          <h3>Pass / Fail List</h3>
+          <div class="form-grid">
+            <div class="form-group"><label>Semester</label>
+              <select id="pfSemester">
+                <option value="1">Semester 1</option><option value="2">Semester 2</option><option value="3">Semester 3</option>
+                <option value="4">Semester 4</option><option value="5">Semester 5</option><option value="6">Semester 6</option>
+                <option value="7">Semester 7</option><option value="8">Semester 8</option>
+              </select>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn" onclick="renderPassFail('pass')">✅ Pass List</button>
+            <button class="btn btn-outline" onclick="renderPassFail('fail')">❌ Fail List</button>
+            <button class="btn btn-outline btn-sm" onclick="exportCSV(currentPassFailList, 'pass_fail_list.csv')">⬇ Export CSV</button>
+            <button class="btn btn-outline btn-sm" onclick="exportPDF(currentPassFailList, 'Pass Fail List')">🖨 Export PDF</button>
+          </div>
+          <table>
+            <thead><tr><th>Name</th><th>Program</th><th>Session</th><th>Semester %</th><th>Status</th></tr></thead>
+            <tbody id="passFailTable"><tr class="empty-row"><td colspan="5">Select semester and click Pass or Fail List.</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <h3>GPA / CGPA Report (single student, on-screen)</h3>
+          <div class="form-grid">
+            <div class="form-group"><label>Select Student</label>
+              <select id="reportStudent" onchange="renderReport()"><option value="">-- select student --</option></select>
+            </div>
+          </div>
+          <div id="reportContent" style="margin-top:15px;">
+            <p style="color:#9ca3af;">Select a student above to view their GPA/CGPA report.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TIMETABLE -->
+      <div id="timetable" class="page">
+        <h1>Timetable</h1>
+        <p class="subtitle">Manage class schedule</p>
+        <div class="panel">
+          <h3>Add Timetable Entry</h3>
+          <form id="timetableForm">
+            <div class="form-grid">
+              <div class="form-group"><label>Day</label>
+                <select id="ttDay" required>
+                  <option value="">-- select --</option>
+                  <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+                  <option>Thursday</option><option>Friday</option><option>Saturday</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Time Slot</label><input type="text" id="ttTime" placeholder="e.g. 9:00 - 10:00 AM" required></div>
+              <div class="form-group"><label>Course</label>
+                <select id="ttCourse" required><option value="">-- select course --</option></select>
+              </div>
+              <div class="form-group"><label>Faculty</label>
+                <select id="ttFaculty" required><option value="">-- select faculty --</option></select>
+              </div>
+              <div class="form-group"><label>Program</label>
+                <select id="ttProgram" required>
+                  <option value="">-- select --</option>
+                  <option>BS Computer Science</option><option>BS Mathematics</option>
+                  <option>BS Physics</option><option>BS Chemistry</option><option>BS English</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Semester</label>
+                <select id="ttSemester" required>
+                  <option value="">-- select --</option>
+                  <option>1</option><option>2</option><option>3</option><option>4</option>
+                  <option>5</option><option>6</option><option>7</option><option>8</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Room</label><input type="text" id="ttRoom" placeholder="e.g. Room 101" required></div>
+            </div>
+            <button type="submit" class="btn">➕ Add Entry</button>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Timetable</h3>
+            <button class="btn btn-outline btn-sm" onclick="exportCSV(timetable, 'timetable.csv')">⬇ Export CSV</button>
+            <button class="btn btn-outline btn-sm" onclick="exportPDF(timetable, 'Timetable')">🖨 Export PDF</button>
+          </div>
+          <table>
+            <thead><tr><th>Day</th><th>Time</th><th>Course</th><th>Faculty</th><th>Program</th><th>Sem</th><th>Room</th><th>Action</th></tr></thead>
+            <tbody id="timetableTable"><tr class="empty-row"><td colspan="8">No timetable entries yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- DATESHEET -->
+      <div id="datesheet" class="page">
+        <h1>Datesheet</h1>
+        <p class="subtitle">Manage exam schedule</p>
+        <div class="panel">
+          <h3>Add Datesheet Entry</h3>
+          <form id="datesheetForm">
+            <div class="form-grid">
+              <div class="form-group"><label>Exam Date</label><input type="date" id="dsDate" required></div>
+              <div class="form-group"><label>Time Slot</label><input type="text" id="dsTime" placeholder="e.g. 9:00 - 12:00 PM" required></div>
+              <div class="form-group"><label>Course</label>
+                <select id="dsCourse" required><option value="">-- select course --</option></select>
+              </div>
+              <div class="form-group"><label>Program</label>
+                <select id="dsProgram" required>
+                  <option value="">-- select --</option>
+                  <option>BS Computer Science</option><option>BS Mathematics</option>
+                  <option>BS Physics</option><option>BS Chemistry</option><option>BS English</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Semester</label>
+                <select id="dsSemester" required>
+                  <option value="">-- select --</option>
+                  <option>1</option><option>2</option><option>3</option><option>4</option>
+                  <option>5</option><option>6</option><option>7</option><option>8</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Room</label><input type="text" id="dsRoom" placeholder="e.g. Hall A" required></div>
+            </div>
+            <button type="submit" class="btn">➕ Add Entry</button>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Exam Datesheet</h3>
+            <button class="btn btn-outline btn-sm" onclick="exportCSV(datesheet, 'datesheet.csv')">⬇ Export CSV</button>
+            <button class="btn btn-outline btn-sm" onclick="exportPDF(datesheet, 'Datesheet')">🖨 Export PDF</button>
+          </div>
+          <table>
+            <thead><tr><th>Date</th><th>Time</th><th>Course</th><th>Program</th><th>Sem</th><th>Room</th><th>Action</th></tr></thead>
+            <tbody id="datesheetTable"><tr class="empty-row"><td colspan="7">No datesheet entries yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MERIT & RESULTS -->
+      <div id="merit" class="page">
+        <h1>Merit &amp; Results</h1>
+        <p class="subtitle">GPA/CGPA are computed on saved results; ranking uses the calculated CGPA.</p>
+
+        <div class="btn-row" style="margin-bottom:15px;">
+          <button class="btn" id="resultsTabBtn" onclick="switchMeritSubTab('results')">Results</button>
+          <button class="btn btn-outline" id="meritListTabBtn" onclick="switchMeritSubTab('meritlist')">Scholarships</button>
+        </div>
+
+        <!-- RESULTS SUB-TAB -->
+        <div id="resultsSubTab">
+          <div class="panel">
+            <div class="form-grid">
+              <div class="form-group"><label>Session</label>
+                <select id="resSession">
+                  <option value="">All sessions</option>
+                  <option>2024-2028</option><option>2025-2029</option><option>2026-2030</option>
+                </select>
+              </div>
+              <div class="form-group"><label>BS Program</label>
+                <select id="resProgram">
+                  <option value="">All programs</option>
+                  <option>BS Computer Science</option><option>BS Mathematics</option>
+                  <option>BS Physics</option><option>BS Chemistry</option><option>BS English</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Semester</label>
+                <select id="resSemester">
+                  <option value="1">Semester 1</option><option value="2">Semester 2</option>
+                  <option value="3">Semester 3</option><option value="4">Semester 4</option>
+                  <option value="5">Semester 5</option><option value="6">Semester 6</option>
+                  <option value="7">Semester 7</option><option value="8">Semester 8</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn" onclick="renderResultsTable()">🔍 Generate Results</button>
+          </div>
+
+          <div class="panel" style="overflow-x:auto;">
+            <div class="panel-head">
+              <h3>Results</h3>
+              <button class="btn btn-outline btn-sm" onclick="exportResultsTable()">⬇ Export CSV</button>
+            </div>
+            <table id="resultsTableWrapper">
+              <thead id="resultsTableHead"><tr><th>#</th><th>Roll No</th><th>Name</th><th>F/Name</th><th>Total</th><th>%age</th><th>Grade</th><th>GPA</th><th>CGPA</th><th>Promotion</th><th>Failed Subjects</th></tr></thead>
+              <tbody id="resultsTableBody"><tr class="empty-row"><td colspan="11">Select session/program/semester and click "Generate Results".</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SCHOLARSHIPS SUB-TAB -->
+        <div id="meritListSubTab" style="display:none;">
+          <div class="panel">
+            <div class="form-grid">
+              <div class="form-group"><label>Session</label>
+                <select id="meritSession">
+                  <option value="">All sessions</option>
+                  <option>2024-2028</option><option>2025-2029</option><option>2026-2030</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Program</label>
+                <select id="meritProgram">
+                  <option value="">All programs</option>
+                  <option>BS Computer Science</option><option>BS Mathematics</option>
+                  <option>BS Physics</option><option>BS Chemistry</option><option>BS English</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Based on Semester</label>
+                <select id="meritBasisSemester">
+                  <option value="1">Semester 1</option><option value="2">Semester 2</option>
+                  <option value="3">Semester 3</option><option value="4">Semester 4</option>
+                  <option value="5">Semester 5</option><option value="6">Semester 6</option>
+                  <option value="7">Semester 7</option><option value="8" selected>Semester 8</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn" onclick="renderMerit()">🔍 Generate Scholarship List</button>
+          </div>
+          <div class="panel" style="overflow-x:auto;">
+            <div class="panel-head">
+              <h3>Scholarships</h3>
+              <div class="btn-row">
+                <button class="btn btn-outline btn-sm" onclick="printMeritList()">🖨 Print / Save as PDF</button>
+                <button class="btn btn-outline btn-sm" onclick="exportMerit()">⬇ Export CSV</button>
+              </div>
+            </div>
+            <table>
+              <thead id="meritTableHead"><tr><th>S.No</th><th>Roll No</th><th>Name</th><th>CNIC</th><th>Contact No</th><th>Department/Program</th><th>Session</th><th>Current Semester</th><th>GPA 1</th><th>Current CGPA</th><th>Total CGPA</th></tr></thead>
+              <tbody id="meritTable"><tr class="empty-row"><td colspan="11">Click "Generate Scholarship List" to view results.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- USERS -->
+      <div id="users" class="page">
+        <h1>Users</h1>
+        <p class="subtitle">Manage system user accounts &amp; roles</p>
+        <div class="panel">
+          <h3>Add User</h3>
+          <form id="userForm">
+            <div class="form-grid">
+              <div class="form-group"><label>Username</label><input type="text" id="userUsername" required></div>
+              <div class="form-group"><label>Full Name</label><input type="text" id="userFullName" required></div>
+              <div class="form-group"><label>Email</label><input type="email" id="userEmail" required></div>
+              <div class="form-group"><label>Role</label>
+                <select id="userRole" required>
+                  <option value="">-- select --</option>
+                  <option>Super Admin</option><option>Admin</option><option>Principal</option>
+                  <option>Controller of Examination</option><option>BS Coordinator</option>
+                  <option>Examination Cell</option><option>Faculty Member</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Status</label>
+                <select id="userStatus" required><option>Active</option><option>Inactive</option></select>
+              </div>
+            </div>
+            <button type="submit" class="btn">➕ Add User</button>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>User List</h3>
+            <button class="btn btn-outline btn-sm" onclick="exportCSV(users, 'users.csv')">⬇ Export CSV</button>
+              <button class="btn btn-outline btn-sm" onclick="exportPDF(users, 'Users List')">🖨 Export PDF</button>
+          </div>
+          <table>
+            <thead><tr><th>Username</th><th>Full Name</th><th>Email</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="usersTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div id="settings" class="page">
+        <h1>Settings</h1>
+        <p class="subtitle">College branding settings</p>
+        <div class="panel">
+          <h3>College Info</h3>
+          <div class="form-grid">
+            <div class="form-group"><label>College Name</label><input type="text" id="settingCollegeName" placeholder="e.g. Government Boys Postgraduate College"></div>
+            <div class="form-group"><label>Address / Tagline (shown in top bar)</label><input type="text" id="settingTagline" placeholder="e.g. Sariab Road, Quetta"></div>
+            <div class="form-group"><label>College Logo</label><input type="file" id="settingLogo" accept="image/*" style="display:block;"></div>
+          </div>
+          <button class="btn" onclick="saveSettings()">💾 Save Settings</button>
+        </div>
+
+        <div class="panel">
+          <h3>Fee Structure</h3>
+          <p style="font-size:13px; color:#9ca3af; margin-bottom:10px;" id="feeLockNote">Set the fixed amounts once, then lock them to prevent accidental changes.</p>
+          <div class="form-grid">
+            <div class="form-group"><label>Admission Fee (Rs.)</label><input type="number" id="settingAdmissionFee" min="0"></div>
+            <div class="form-group"><label>Semester Fee (Rs., per semester)</label><input type="number" id="settingSemesterFee" min="0"></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn" id="feeLockBtn" onclick="lockFeeStructure()">🔒 Save &amp; Lock</button>
+            <button class="btn btn-outline" id="feeUnlockBtn" style="display:none;" onclick="unlockFeeStructure()">🔓 Unlock to Edit</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Featured Profiles (Dashboard picture cards)</h3>
+          <p style="font-size:13px; color:#9ca3af; margin-bottom:10px;">Upload up to 4 photos with a short caption (e.g. Ex-Principal, current Director). These appear on the Dashboard.</p>
+          <div id="profileSettingsGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:15px;"></div>
+          <button class="btn" style="margin-top:15px;" onclick="saveProfileCards()">💾 Save Featured Profiles</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+  // ===== SUPABASE CONFIG =====
+  // Fill these in from your Supabase Project Settings -> API page, then reload.
+  const SUPABASE_URL = 'https://dmbrhzwederxmkrknrox.supabase.co';       // e.g. https://xxxxx.supabase.co
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtYnJoendlZGVyeG1rcmtucm94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4NzIyOTYsImV4cCI6MjEwMDQ0ODI5Nn0.Xx0aJN6Kqgoh9jE_oGxcXk_WnZrYMwo5mHkyFEYsBkE';     // the "anon public" key
+
+  let db = null;
+  let cloudEnabled = false;
+
+  try {
+    if (SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY.length > 20 && window.supabase) {
+      db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      cloudEnabled = true;
+    } else {
+      console.warn('Supabase not configured or library failed to load — running in local-only (non-persistent) mode.');
+    }
+  } catch (err) {
+    console.error('Failed to initialize Supabase client:', err);
+    cloudEnabled = false;
+  }
+
+  // Generic helpers — every table follows the same insert/update/delete pattern.
+  // These fail silently into the console if Supabase isn't configured, so the
+  // app still works locally (just without persistence) if you haven't set it up yet.
+  async function sbInsert(table, record) {
+    if (!cloudEnabled) return null;
+    const { error } = await db.from(table).insert(record);
+    if (error) console.error('[Supabase insert:' + table + ']', error.message);
+    return error;
+  }
+  async function sbUpdate(table, id, record) {
+    if (!cloudEnabled) return;
+    const { error } = await db.from(table).update(record).eq('id', id);
+    if (error) console.error('[Supabase update:' + table + ']', error.message);
+  }
+  async function sbDelete(table, id) {
+    if (!cloudEnabled) return;
+    const { error } = await db.from(table).delete().eq('id', id);
+    if (error) console.error('[Supabase delete:' + table + ']', error.message);
+  }
+  async function sbFetchAll(table) {
+    if (!cloudEnabled) return [];
+    const { data, error } = await db.from(table).select('*');
+    if (error) { console.error('[Supabase fetch:' + table + ']', error.message); return []; }
+    return data || [];
+  }
+  function newId() {
+    return (crypto.randomUUID ? crypto.randomUUID() : 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2));
+  }
+
+  // ===== DATA STORES =====
+  let admissions = [];
+  let faculty = [];
+  let departments = [];
+  let courses = [];
+  let attendanceRecords = {}; // key: date+course -> array of {name, program, status}
+  let examMarks = []; // {student, program, course, semester, credit, total, percentage, gp, grade}
+  let timetable = [];
+  let datesheet = [];
+  let feeRecords = [];
+  let feeSettings = { admissionFee: 0, semesterFee: 0, locked: false };
+  let users = [
+    { username: 'superadmin', fullname: 'Super Admin', email: 'superadmin@gbpgc.edu.pk', role: 'Super Admin', status: 'Active' },
+    { username: 'admin', fullname: 'College Admin', email: 'admin@gbpgc.edu.pk', role: 'Admin', status: 'Active' },
+    { username: 'principal', fullname: 'Prof. Principal Sahib', email: 'principal@gbpgc.edu.pk', role: 'Principal', status: 'Active' },
+    { username: 'controller', fullname: 'Controller of Examinations', email: 'controller@gbpgc.edu.pk', role: 'Controller of Examination', status: 'Active' },
+    { username: 'coordinator', fullname: 'BS Coordinator', email: 'coordinator@gbpgc.edu.pk', role: 'BS Coordinator', status: 'Active' },
+    { username: 'examcell', fullname: 'Examination Cell Officer', email: 'examcell@gbpgc.edu.pk', role: 'Examination Cell', status: 'Active' },
+    { username: 'faculty', fullname: 'Dr. Faculty Member', email: 'faculty@gbpgc.edu.pk', role: 'Faculty Member', status: 'Active' }
+  ];
+
+  // ===== NAVIGATION =====
+  function showPage(id, el) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+    el.classList.add('active');
+    if (id === 'attendance') populateCourseDropdown();
+    if (id === 'exams') populateExamDropdowns();
+    if (id === 'reports') populateReportDropdown();
+    if (id === 'timetable') populateTimetableDropdowns();
+    if (id === 'datesheet') populateDatesheetDropdowns();
+    if (id === 'fee') populateFeeDropdown();
+    if (id === 'settings') renderProfileSettings();
+    if (id === 'addresult') populateAddResultCourses();
+  }
+
+  function populateFeeDropdown() {
+    feeStudent.innerHTML = '<option value="">-- select student --</option>' +
+      admissions.map(a => `<option value="${a.name}">${a.name}</option>`).join('');
+    feeReportStudent.innerHTML = '<option value="">All students</option>' +
+      admissions.map(a => `<option value="${a.name}">${a.name}</option>`).join('');
+  }
+
+  function populateTimetableDropdowns() {
+    ttCourse.innerHTML = '<option value="">-- select course --</option>' + courses.map(c => `<option>${c.name}</option>`).join('');
+    ttFaculty.innerHTML = '<option value="">-- select faculty --</option>' + faculty.map(f => `<option>${f.name}</option>`).join('');
+  }
+
+  function populateDatesheetDropdowns() {
+    dsCourse.innerHTML = '<option value="">-- select course --</option>' + courses.map(c => `<option>${c.name}</option>`).join('');
+  }
+
+  function populateExamDropdowns() {
+    markStudent.innerHTML = '<option value="">-- select student --</option>' +
+      admissions.map(a => `<option value="${a.name}" data-program="${a.program}">${a.name}</option>`).join('');
+    markCourse.innerHTML = '<option value="">-- select course --</option>' +
+      courses.map(c => `<option value="${c.name}" data-credit="${c.credit}">${c.name} (${c.code})</option>`).join('');
+  }
+
+  function autoFillProgram() {} // program auto-linked via data attribute, no UI field needed currently
+
+  function autoFillCredit() {
+    const opt = markCourse.selectedOptions[0];
+    if (opt && opt.dataset.credit) markCredit.value = opt.dataset.credit;
+  }
+
+  function toggleEntryType() {
+    const isTotal = entryType.value === 'total';
+    totalEntryBox.style.display = isTotal ? 'grid' : 'none';
+    componentEntryBox.style.display = isTotal ? 'none' : 'grid';
+  }
+
+  function populateReportDropdown() {
+    reportStudent.innerHTML = '<option value="">-- select student --</option>' +
+      admissions.map(a => `<option value="${a.name}">${a.name}</option>`).join('');
+    transcriptStudent.innerHTML = '<option value="">-- select student --</option>' +
+      admissions.map(a => `<option value="${a.name}">${a.name}</option>`).join('');
+  }
+
+  // ===== ADMISSION =====
+
+  // Program name -> short code used in Roll No (e.g. BS Computer Science -> CS)
+  const programAbbrev = {
+    'BS Computer Science': 'CS',
+    'BS Mathematics': 'Math',
+    'BS Physics': 'Phy',
+    'BS Chemistry': 'Chem',
+    'BS English': 'Eng'
+  };
+
+  // Generates Roll No like "S-26/Chem:01"
+  // S = Session, 26 = last 2 digits of intake year, Chem = program short code, 01 = sequential ID within that program+year
+  function generateRollNo(programValue, sessionValue) {
+    const yearMatch = (sessionValue || '').match(/\d{4}/);
+    const yearShort = yearMatch ? yearMatch[0].slice(-2) : '00';
+    const progCode = programAbbrev[programValue] || (programValue || 'GEN').replace(/[^A-Za-z]/g, '').slice(0,4);
+
+    const sameGroupCount = admissions.filter(a => a.program === programValue && a.session === sessionValue).length;
+    const seq = (sameGroupCount + 1).toString().padStart(2, '0');
+
+    return 'S-' + yearShort + '/' + progCode + ':' + seq;
+  }
+
+  document.getElementById('admissionForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const rollNo = generateRollNo(program.value, session.value);
+    const record = {
+      id: newId(), rollNo: rollNo,
+      name: stuName.value, father: fatherName.value, cnic: cnic.value,
+      phone: phone.value, program: program.value, session: session.value,
+      currentSemester: parseInt(currentSemester.value),
+      status: studentStatus.value
+    };
+    admissions.push(record);
+    const err = await sbInsert('admissions', { id: record.id, roll_no: record.rollNo, name: record.name, father: record.father,
+      cnic: record.cnic, phone: record.phone, program: record.program, session: record.session,
+      current_semester: record.currentSemester, student_status: record.status });
+    this.reset();
+    renderAll();
+    if (err) {
+      alert('⚠️ Saved locally, but CLOUD SAVE FAILED: ' + err.message + '\n\nThis usually means the "student_status" column is missing — run alter_tables.sql in Supabase SQL Editor.');
+    } else {
+      alert('Admission submitted successfully! Roll No: ' + rollNo + (cloudEnabled ? ' (saved to cloud)' : ' (local only — cloud not connected)'));
+    }
+  });
+
+  function deleteAdmission(i) {
+    const record = admissions[i];
+    admissions.splice(i,1);
+    if (record) sbDelete('admissions', record.id);
+    renderAll();
+  }
+
+  function renderAdmissions() {
+
+    admissionTable.innerHTML = admissions.map((a,i) => `
+      <tr><td><b>${a.rollNo || '-'}</b></td><td>${a.name}</td><td>${a.father}</td><td>${a.cnic}</td><td>${a.phone}</td><td>${a.program}</td><td>${a.session}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteAdmission(${i})">Delete</button></td></tr>
+    `).join('') || `<tr class="empty-row"><td colspan="8">No records yet.</td></tr>`;
+
+    recentAdmissionsTable.innerHTML = admissions.slice(-5).reverse().map(a => `
+      <tr><td>${a.name}</td><td>${a.program}</td><td>${a.session}</td><td style="color:#059669;">Registered</td></tr>
+    `).join('') || `<tr class="empty-row"><td colspan="4">No admissions yet.</td></tr>`;
+  }
+
+  function renderStudents() {
+    const q = (studentSearch.value || '').toLowerCase();
+    const filtered = admissions.filter(a => a.name.toLowerCase().includes(q) || a.program.toLowerCase().includes(q));
+    studentsTable.innerHTML = filtered.map(a => {
+      const i = admissions.indexOf(a);
+      const sem = a.currentSemester || 1;
+      const canPromote = sem < 8;
+      return `
+      <tr><td><b>${a.rollNo || '-'}</b></td><td>${a.name}</td><td>${a.father}</td><td>${a.cnic}</td><td>${a.phone}</td><td>${a.program}</td><td>${a.session}</td>
+      <td>Semester ${sem}</td>
+      <td>${canPromote ? `<button class="btn btn-sm" onclick="promoteStudent(${i})">⬆ Promote</button>` : `<span style="color:#9ca3af; font-size:12px;">Final Semester</span>`}</td></tr>
+    `;
+    }).join('') || `<tr class="empty-row"><td colspan="9">No students found.</td></tr>`;
+  }
+
+  // Promote a student to next semester, and auto-move their newly-due semester fee from "Upcoming" to "Unpaid"
+  function promoteStudent(i) {
+    const a = admissions[i];
+    if (!a) return;
+    const currentSem = a.currentSemester || 1;
+    if (currentSem >= 8) { alert(a.name + ' is already in the final semester.'); return; }
+
+    const newSem = currentSem + 1;
+    if (!confirm('Promote ' + a.name + ' from Semester ' + currentSem + ' to Semester ' + newSem + '?')) return;
+
+    a.currentSemester = newSem;
+    sbUpdate('admissions', a.id, { current_semester: newSem });
+
+    // Auto-update fee: any 'Upcoming' Tuition Fee record for this student at or before the new semester becomes 'Unpaid' (due)
+    let updatedFeeCount = 0;
+    feeRecords.forEach(f => {
+      if (f.student === a.name && f.type === 'Tuition Fee' && parseInt(f.semester) <= newSem && f.status === 'Upcoming') {
+        f.status = 'Unpaid';
+        sbUpdate('fee_records', f.id, { status: 'Unpaid' });
+        updatedFeeCount++;
+      }
+    });
+
+    renderAll();
+    alert(a.name + ' promoted to Semester ' + newSem + '.' + (updatedFeeCount ? ' ' + updatedFeeCount + ' semester fee record(s) moved to Pending/Unpaid.' : ''));
+  }
+
+  // ===== FACULTY =====
+  document.getElementById('facultyForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const record = { id: newId(), name: facName.value, designation: facDesignation.value, department: facDept.value, phone: facPhone.value, email: facEmail.value };
+    faculty.push(record);
+    sbInsert('faculty', record);
+    this.reset();
+    renderFaculty();
+  });
+  function deleteFaculty(i) {
+    const record = faculty[i];
+    faculty.splice(i,1);
+    if (record) sbDelete('faculty', record.id);
+    renderFaculty();
+  }
+  function renderFaculty() {
+    facultyTable.innerHTML = faculty.map((f,i) => `
+      <tr><td>${f.name}</td><td>${f.designation}</td><td>${f.department}</td><td>${f.phone}</td><td>${f.email}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteFaculty(${i})">Delete</button></td></tr>
+    `).join('') || `<tr class="empty-row"><td colspan="6">No faculty yet.</td></tr>`;
+  }
+
+  // ===== DEPARTMENTS =====
+  document.getElementById('deptForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const record = { id: newId(), name: deptName.value, code: deptCode.value, hod: deptHOD.value };
+    departments.push(record);
+    sbInsert('departments', record);
+    this.reset();
+    renderDepartments();
+  });
+  function deleteDept(i) {
+    const record = departments[i];
+    departments.splice(i,1);
+    if (record) sbDelete('departments', record.id);
+    renderDepartments();
+  }
+  function renderDepartments() {
+    departmentsTable.innerHTML = departments.map((d,i) => `
+      <tr><td>${d.name}</td><td>${d.code}</td><td>${d.hod}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteDept(${i})">Delete</button></td></tr>
+    `).join('') || `<tr class="empty-row"><td colspan="4">No departments yet.</td></tr>`;
+  }
+
+  // ===== COURSES =====
+  document.getElementById('courseForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const record = { id: newId(), name: courseName.value, code: courseCode.value, credit: parseFloat(courseCredit.value), department: courseDept.value, semester: parseInt(courseSemester.value) };
+    courses.push(record);
+    sbInsert('courses', record);
+    this.reset();
+    renderCourses();
+  });
+  function deleteCourse(i) {
+    const record = courses[i];
+    courses.splice(i,1);
+    if (record) sbDelete('courses', record.id);
+    renderCourses();
+  }
+  function renderCourses() {
+    coursesTable.innerHTML = courses.map((c,i) => `
+      <tr><td>${c.name}</td><td>${c.code}</td><td>${c.credit}</td><td>${c.department}</td><td>${c.semester}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteCourse(${i})">Delete</button></td></tr>
+    `).join('') || `<tr class="empty-row"><td colspan="6">No courses yet.</td></tr>`;
+  }
+
+  // ===== ATTENDANCE =====
+  function populateCourseDropdown() {
+    attCourse.innerHTML = '<option value="">-- select course --</option>' +
+      courses.map(c => `<option value="${c.name}">${c.name} (${c.code})</option>`).join('');
+  }
+
+  function loadAttendanceSheet() {
+    const date = attDate.value;
+    const course = attCourse.value;
+    if (!date || !course) { alert('Please select date and course.'); return; }
+    const key = date + '|' + course;
+
+    if (!attendanceRecords[key]) {
+      attendanceRecords[key] = admissions.map(a => ({ name: a.name, program: a.program, status: 'Present' }));
+    }
+    renderAttendanceSheet(key);
+  }
+
+  function renderAttendanceSheet(key) {
+    const records = attendanceRecords[key] || [];
+    attendanceTable.innerHTML = records.map((r, i) => `
+      <tr>
+        <td>${r.name}</td><td>${r.program}</td>
+        <td>
+          <button class="att-btn ${r.status==='Present'?'att-present':''}" onclick="setAttendance('${key}', ${i}, 'Present')">Present</button>
+          <button class="att-btn ${r.status==='Absent'?'att-absent':''}" onclick="setAttendance('${key}', ${i}, 'Absent')">Absent</button>
+        </td>
+      </tr>
+    `).join('') || `<tr class="empty-row"><td colspan="3">No students found. Add admissions first.</td></tr>`;
+  }
+
+  function setAttendance(key, i, status) {
+    attendanceRecords[key][i].status = status;
+    renderAttendanceSheet(key);
+  }
+
+  function exportAttendance() {
+    const date = attDate.value, course = attCourse.value;
+    const key = date + '|' + course;
+    const records = attendanceRecords[key];
+    if (!records) { alert('Load an attendance sheet first.'); return; }
+    exportCSV(records, `attendance_${course}_${date}.csv`);
+  }
+
+  // ===== CSV EXPORT / IMPORT =====
+  function exportCSV(data, filename) {
+    if (!data.length) { alert('No data to export.'); return; }
+    const headers = Object.keys(data[0]);
+    const rows = data.map(row => headers.map(h => `"${(row[h] ?? '').toString().replace(/"/g,'""')}"`).join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+  }
+
+  // Generic PDF export — opens a print-ready table in a new tab (any array of objects).
+  // Used across Admission, Students, Faculty, Departments, Courses, Timetable, Datesheet, Fee, Users, Exams & Marks.
+  function exportPDF(data, title) {
+    if (!data.length) { alert('No data to export.'); return; }
+    const headers = Object.keys(data[0]);
+    const collegeName = collegeNameSidebar.innerText;
+
+    const rowsHTML = data.map(row => `
+      <tr>${headers.map(h => `<td style="border:1px solid #999; padding:5px; font-size:11px;">${row[h] ?? ''}</td>`).join('')}</tr>
+    `).join('');
+
+    const win = window.open('', '_blank');
+    if (!win) { alert('Popup blocked! Please allow popups for this page and try again.'); return; }
+    win.document.write(`
+      <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding:25px; color:#111; }
+          h1 { text-align:center; font-size:18px; margin-bottom:0; }
+          .tagline { text-align:center; font-size:12px; color:#555; margin-bottom:15px; }
+          .title { text-align:center; font-weight:bold; text-decoration:underline; margin-bottom:15px; font-size:14px; }
+          table { width:100%; border-collapse:collapse; }
+          th { border:1px solid #999; padding:5px; background:#f3f4f6; font-size:11px; text-align:left; }
+        </style>
+      </head>
+      <body>
+        <h1>${collegeName}</h1>
+        <div class="tagline">${topbarText.innerText}</div>
+        <div class="title">${title}</div>
+        <table>
+          <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+          <tbody>${rowsHTML}</tbody>
+        </table>
+      </body>
+      </html>
+    `);
+    win.document.close();
+    setTimeout(function() { win.print(); }, 400);
+  }
+
+  function importCSV(event, targetArray, renderFn, tableName) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const lines = e.target.result.split(/\r?\n/).filter(l => l.trim() !== '');
+      const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
+      const newRows = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].match(/(".*?"|[^,]+)(?=,|$)/g).map(v => v.replace(/^"|"$/g,'').trim());
+        const obj = { id: newId() };
+        headers.forEach((h, idx) => obj[h] = values[idx] || '');
+
+        // Type-coerce fields that must be numbers, so calculations elsewhere don't break
+        if (tableName === 'courses') { obj.credit = parseFloat(obj.credit) || 3; obj.semester = parseInt(obj.semester) || 1; }
+        if (tableName === 'admissions') { obj.currentSemester = parseInt(obj.currentSemester) || 1; if (!obj.status) obj.status = 'Active'; }
+
+        targetArray.push(obj);
+        newRows.push(obj);
+      }
+
+      renderFn();
+      event.target.value = '';
+
+      // Sync the imported rows to Supabase too, mapping field names to the DB's column names
+      if (cloudEnabled && tableName && newRows.length) {
+        let dbRows = [];
+        if (tableName === 'admissions') {
+          dbRows = newRows.map(a => ({ id: a.id, roll_no: a.rollNo || a.roll_no || '', name: a.name, father: a.father,
+            cnic: a.cnic, phone: a.phone, program: a.program, session: a.session,
+            current_semester: a.currentSemester, student_status: a.status }));
+        } else {
+          dbRows = newRows; // faculty / departments / courses use the same field names as their DB columns
+        }
+        const { error } = await db.from(tableName).insert(dbRows);
+        if (error) { console.error('[Supabase import:' + tableName + ']', error.message); alert('Imported locally, but saving to cloud failed: ' + error.message); return; }
+      }
+
+      alert('Import successful! (' + newRows.length + ' rows' + (cloudEnabled ? ', saved to cloud' : ', local only — cloud not connected') + ')');
+    };
+    reader.readAsText(file);
+  }
+
+  // ===== EXAMS & MARKS / GPA CALCULATION =====
+
+  // Convert marks (0-100) to Grade Point per the college table:
+  // below 50 = 0.00 | 50-79 = 1.00 + (marks-50)*0.10 | 80 and above = 4.00
+  function marksToGP(marks) {
+    marks = parseFloat(marks);
+    if (isNaN(marks)) return 0;
+    if (marks < 50) return 0.00;
+    if (marks >= 80) return 4.00;
+    return Math.round((1.00 + (marks - 50) * 0.10) * 100) / 100;
+  }
+
+  // Letter grade based on percentage ranges
+  function marksToGrade(marks) {
+    marks = parseFloat(marks);
+    if (marks >= 85) return 'A+';
+    if (marks >= 80) return 'A';
+    if (marks >= 75) return 'B+';
+    if (marks >= 65) return 'B';
+    if (marks >= 61) return 'C+';
+    if (marks >= 55) return 'C';
+    if (marks >= 50) return 'D';
+    return 'F';
+  }
+
+  document.getElementById('marksForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const studentOpt = markStudent.selectedOptions[0];
+    const program = studentOpt ? studentOpt.dataset.program : '';
+    let total;
+
+    if (entryType.value === 'total') {
+      total = parseFloat(totalMarks.value);
+      if (isNaN(total)) { alert('Please enter total marks.'); return; }
+    } else {
+      const a = parseFloat(markAssignment.value) || 0;
+      const m = parseFloat(markMid.value) || 0;
+      const f = parseFloat(markFinal.value) || 0;
+      total = a + m + f;
+    }
+
+    const gp = marksToGP(total);
+    const grade = marksToGrade(total);
+    const courseObj = courses.find(c => c.name === markCourse.value);
+
+    const record = {
+      id: newId(),
+      student: markStudent.value,
+      program: program,
+      course: markCourse.value,
+      code: courseObj ? courseObj.code : '',
+      semester: parseInt(markSemester.value),
+      credit: parseFloat(markCredit.value),
+      total: total,
+      percentage: total,
+      gp: gp,
+      grade: grade
+    };
+    examMarks.push(record);
+    sbInsert('exam_marks', record);
+
+    this.reset();
+    totalEntryBox.style.display = 'grid';
+    componentEntryBox.style.display = 'none';
+    renderMarks();
+    alert('Marks saved! GP: ' + gp.toFixed(2) + ' | Grade: ' + grade);
+  });
+
+  function deleteMark(i) {
+    const record = examMarks[i];
+    examMarks.splice(i,1);
+    if (record) sbDelete('exam_marks', record.id);
+    renderMarks();
+  }
+
+  function renderMarks() {
+    marksTable.innerHTML = examMarks.map((m,i) => `
+      <tr><td>${m.student}</td><td>${m.course}</td><td>${m.semester}</td><td>${m.credit}</td>
+      <td>${m.total}</td><td>${m.percentage}%</td><td>${m.gp.toFixed(2)}</td><td>${m.grade}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteMark(${i})">Delete</button></td></tr>
+    `).join('') || `<tr class="empty-row"><td colspan="9">No marks entered yet.</td></tr>`;
+  }
+
+  // ===== ADD RESULT (bulk entry sheet) =====
+
+  // Populate course dropdown filtered to the selected semester only
+  function populateAddResultCourses() {
+    const sem = parseInt(arSemester.value);
+    // Show ALL courses (same list as the Courses module) if no semester is chosen yet,
+    // or just that semester's courses once one is picked — either way the list is always
+    // freshly rebuilt from the current `courses` array, so newly added courses always show up.
+    const list = sem ? courses.filter(c => c.semester === sem) : courses.slice();
+
+    if (!list.length) {
+      arCourse.innerHTML = `<option value="">-- no courses found${sem ? ' for Semester ' + sem : ''}, add one in Courses first --</option>`;
+      return;
+    }
+
+    arCourse.innerHTML = '<option value="">-- select course --</option>' +
+      list.map(c => `<option value="${c.name}" data-credit="${c.credit}" data-semester="${c.semester}">${c.code ? c.code + ' — ' : ''}${c.name}${!sem ? ' (Sem ' + c.semester + ')' : ''}</option>`).join('');
+    arCredit.value = '';
+  }
+
+  // Auto-fill Credit Hours when a course is selected (still editable by the user)
+  function autoFillArCredit() {
+    const opt = arCourse.selectedOptions[0];
+    if (opt && opt.dataset.credit) { arCredit.value = opt.dataset.credit; }
+    // If Semester wasn't picked yet but the chosen course has one, auto-select it too
+    if (opt && opt.dataset.semester && !arSemester.value) { arSemester.value = opt.dataset.semester; }
+  }
+
+  // Load the student sheet for the selected Session + Program + Semester + Course
+  function loadAddResultSheet() {
+    const session = arSession.value, program = arProgram.value, sem = parseInt(arSemester.value), courseName = arCourse.value;
+    const entryType = arEntryType.value;
+
+    if (!session || !program || !sem || !courseName) {
+      addResultTable.innerHTML = `<tr class="empty-row"><td colspan="3">Select session, program, semester and course to load students.</td></tr>`;
+      arCount.innerText = '';
+      return;
+    }
+
+    const matchingStudents = admissions.filter(a => a.session === session && a.program === program);
+
+    if (!matchingStudents.length) {
+      addResultTable.innerHTML = `<tr class="empty-row"><td colspan="3">No students found for this session &amp; program.</td></tr>`;
+      arCount.innerText = '';
+      return;
+    }
+
+    if (entryType === 'component') {
+      // Assignment/Quiz max 30, Mid max 30, Final max 40 — total shown live as you type
+      addResultHead.innerHTML = `<tr><th>Roll No</th><th>Student</th><th>Assignment/Quiz (/30)</th><th>Mid (/30)</th><th>Final (/40)</th><th>Total</th></tr>`;
+
+      addResultTable.innerHTML = matchingStudents.map(a => {
+        const existing = examMarks.find(m => m.student === a.name && m.course === courseName && parseInt(m.semester) === sem);
+        const aVal = existing && existing.assignment !== undefined ? existing.assignment : '';
+        const mVal = existing && existing.mid !== undefined ? existing.mid : '';
+        const fVal = existing && existing.final !== undefined ? existing.final : '';
+        const totalVal = existing ? existing.total : 0;
+        const rowId = 'ar_' + a.name.replace(/[^A-Za-z0-9]/g, '_');
+        return `
+          <tr>
+            <td>${a.rollNo || '-'}</td>
+            <td>${a.name}</td>
+            <td><input type="number" min="0" max="30" class="ar-a-input" id="${rowId}_a" data-student="${a.name}" value="${aVal}" oninput="updateArTotal('${rowId}')" style="width:80px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px;"></td>
+            <td><input type="number" min="0" max="30" class="ar-m-input" id="${rowId}_m" data-student="${a.name}" value="${mVal}" oninput="updateArTotal('${rowId}')" style="width:80px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px;"></td>
+            <td><input type="number" min="0" max="40" class="ar-f-input" id="${rowId}_f" data-student="${a.name}" value="${fVal}" oninput="updateArTotal('${rowId}')" style="width:80px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px;"></td>
+            <td><b id="${rowId}_total" style="font-size:15px;">${totalVal}</b></td>
+          </tr>
+        `;
+      }).join('');
+    } else {
+      // Simple Total /100 entry
+      addResultHead.innerHTML = `<tr><th>Roll No</th><th>Student</th><th>Sub Total /100</th></tr>`;
+
+      addResultTable.innerHTML = matchingStudents.map(a => {
+        const existing = examMarks.find(m => m.student === a.name && m.course === courseName && parseInt(m.semester) === sem);
+        const val = existing ? existing.total : '';
+        return `
+          <tr>
+            <td>${a.rollNo || '-'}</td>
+            <td>${a.name}</td>
+            <td><input type="number" min="0" max="100" class="ar-mark-input" data-student="${a.name}" value="${val}" style="width:100px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px;"></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    arCount.innerText = matchingStudents.length + ' student(s) loaded';
+  }
+
+  // Live-update the Total cell in component entry mode as the user types (capped at each field's max)
+  function updateArTotal(rowId) {
+    const aInput = document.getElementById(rowId + '_a');
+    const mInput = document.getElementById(rowId + '_m');
+    const fInput = document.getElementById(rowId + '_f');
+
+    // Clamp each field to its max so entries can never exceed the allowed range
+    let a = parseFloat(aInput.value) || 0; if (a > 30) { a = 30; aInput.value = 30; }
+    let m = parseFloat(mInput.value) || 0; if (m > 30) { m = 30; mInput.value = 30; }
+    let f = parseFloat(fInput.value) || 0; if (f > 40) { f = 40; fInput.value = 40; }
+
+    const total = a + m + f;
+    document.getElementById(rowId + '_total').innerText = total;
+  }
+
+  // Save all entered marks in the Add Result sheet at once
+  function saveAddResult() {
+    const session = arSession.value, program = arProgram.value, sem = parseInt(arSemester.value), courseName = arCourse.value;
+    const entryType = arEntryType.value;
+    if (!session || !program || !sem || !courseName) { alert('Please select session, program, semester and course first.'); return; }
+
+    const courseObj = courses.find(c => c.name === courseName);
+    const credit = parseFloat(arCredit.value) || (courseObj ? courseObj.credit : 3);
+    const code = courseObj ? courseObj.code : '';
+    let savedCount = 0;
+
+    if (entryType === 'component') {
+      const aInputs = document.querySelectorAll('.ar-a-input');
+      aInputs.forEach(aInput => {
+        const studentName = aInput.dataset.student;
+        const rowId = 'ar_' + studentName.replace(/[^A-Za-z0-9]/g, '_');
+        const mInput = document.getElementById(rowId + '_m');
+        const fInput = document.getElementById(rowId + '_f');
+
+        if (aInput.value === '' && mInput.value === '' && fInput.value === '') return; // skip fully blank rows
+
+        const a = Math.min(parseFloat(aInput.value) || 0, 30);
+        const m = Math.min(parseFloat(mInput.value) || 0, 30);
+        const f = Math.min(parseFloat(fInput.value) || 0, 40);
+        const total = a + m + f;
+
+        const gp = marksToGP(total);
+        const grade = marksToGrade(total);
+        const admission = admissions.find(x => x.name === studentName);
+
+        const existingIndex = examMarks.findIndex(x => x.student === studentName && x.course === courseName && parseInt(x.semester) === sem);
+        const record = {
+          id: existingIndex >= 0 ? examMarks[existingIndex].id : newId(),
+          student: studentName, program: admission ? admission.program : program,
+          course: courseName, code: code, semester: sem, credit: credit,
+          assignment: a, mid: m, final: f,
+          total: total, percentage: total, gp: gp, grade: grade
+        };
+
+        if (existingIndex >= 0) { examMarks[existingIndex] = record; sbUpdate('exam_marks', record.id, record); }
+        else { examMarks.push(record); sbInsert('exam_marks', record); }
+        savedCount++;
+      });
+    } else {
+      const inputs = document.querySelectorAll('.ar-mark-input');
+      inputs.forEach(input => {
+        const studentName = input.dataset.student;
+        const val = input.value;
+        if (val === '' || val === null) return; // skip blanks
+
+        const total = parseFloat(val);
+        const gp = marksToGP(total);
+        const grade = marksToGrade(total);
+        const admission = admissions.find(a => a.name === studentName);
+
+        const existingIndex = examMarks.findIndex(m => m.student === studentName && m.course === courseName && parseInt(m.semester) === sem);
+        const record = {
+          id: existingIndex >= 0 ? examMarks[existingIndex].id : newId(),
+          student: studentName, program: admission ? admission.program : program,
+          course: courseName, code: code, semester: sem, credit: credit,
+          total: total, percentage: total, gp: gp, grade: grade
+        };
+
+        if (existingIndex >= 0) { examMarks[existingIndex] = record; sbUpdate('exam_marks', record.id, record); }
+        else { examMarks.push(record); sbInsert('exam_marks', record); }
+        savedCount++;
+      });
+    }
+
+    renderAll();
+    alert(savedCount + ' result(s) saved for ' + courseName + '.');
+  }
+
+  // Calculate GPA for a single semester's course list: sum(GP*CH)/sum(CH)
+  function calcGPA(courseList) {
+    const totalCH = courseList.reduce((s,c) => s + c.credit, 0);
+    const totalPoints = courseList.reduce((s,c) => s + (c.gp * c.credit), 0);
+    return totalCH > 0 ? (totalPoints / totalCH) : 0;
+  }
+
+  function renderReport() {
+    const student = reportStudent.value;
+    if (!student) {
+      reportContent.innerHTML = '<p style="color:#9ca3af;">Select a student above to view their GPA/CGPA report.</p>';
+      return;
+    }
+
+    const studentMarks = examMarks.filter(m => m.student === student);
+    if (!studentMarks.length) {
+      reportContent.innerHTML = '<p style="color:#9ca3af;">No marks recorded for this student yet.</p>';
+      return;
+    }
+
+    // Group by semester
+    const semesters = [...new Set(studentMarks.map(m => m.semester))].sort((a,b) => a-b);
+
+    let cumulativeCH = 0;
+    let cumulativePoints = 0;
+    let html = '';
+
+    semesters.forEach(sem => {
+      const semCourses = studentMarks.filter(m => m.semester === sem);
+      const semGPA = calcGPA(semCourses);
+      const semCH = semCourses.reduce((s,c) => s + c.credit, 0);
+      const semPoints = semCourses.reduce((s,c) => s + (c.gp * c.credit), 0);
+
+      cumulativeCH += semCH;
+      cumulativePoints += semPoints;
+      const cgpaSoFar = cumulativeCH > 0 ? (cumulativePoints / cumulativeCH) : 0;
+
+      html += `
+        <h3 style="margin-top:20px;">Semester ${sem}</h3>
+        <table>
+          <thead><tr><th>Course</th><th>Credit Hrs</th><th>Marks</th><th>GP</th><th>Grade</th></tr></thead>
+          <tbody>
+            ${semCourses.map(c => `<tr><td>${c.course}</td><td>${c.credit}</td><td>${c.total}</td><td>${c.gp.toFixed(2)}</td><td>${c.grade}</td></tr>`).join('')}
+          </tbody>
+        </table>
+        <p style="margin-top:8px;"><b>Semester GPA:</b> ${semGPA.toFixed(2)} &nbsp; | &nbsp; <b>CGPA up to this semester:</b> ${cgpaSoFar.toFixed(2)}</p>
+      `;
+    });
+
+    html += `<hr style="margin:20px 0;"><h3>Final CGPA: ${(cumulativePoints/cumulativeCH).toFixed(2)}</h3>`;
+
+    reportContent.innerHTML = html;
+  }
+
+  // ===== TRANSCRIPT (professional printable format) =====
+  function generateTranscript() {
+    const studentName = transcriptStudent.value;
+    if (!studentName) { alert('Please select a student.'); return; }
+
+    const admission = admissions.find(a => a.name === studentName);
+    const fromSem = parseInt(transcriptFrom.value);
+    const toSem = parseInt(transcriptTo.value);
+
+    const recs = examMarks.filter(m => m.student === studentName && m.semester >= fromSem && m.semester <= toSem);
+    if (!recs.length) { alert('No marks found for this student in the selected semester range.'); return; }
+
+    const semesters = [...new Set(recs.map(m => parseInt(m.semester)))].sort((a,b) => a-b);
+
+    let cumulativeCH = 0, cumulativePoints = 0;
+    const semesterBlocks = [];
+
+    semesters.forEach(sem => {
+      const semCourses = recs.filter(m => parseInt(m.semester) === sem);
+      const semCH = semCourses.reduce((s,c) => s + c.credit, 0);
+      const semTotal = semCourses.reduce((s,c) => s + c.total, 0);
+      const semMaxTotal = semCourses.length * 100;
+      const semPercentage = semMaxTotal > 0 ? (semTotal / semMaxTotal * 100) : 0;
+      const semPoints = semCourses.reduce((s,c) => s + (c.gp * c.credit), 0);
+      const semGPA = semCH > 0 ? (semPoints / semCH) : 0;
+
+      cumulativeCH += semCH;
+      cumulativePoints += semPoints;
+      const cgpaSoFar = cumulativeCH > 0 ? (cumulativePoints / cumulativeCH) : 0;
+
+      const blockHTML = `
+        <div class="sem-block">
+          <b>Semester ${sem}</b>
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align:left;">Code</th>
+                <th style="text-align:left;">Course</th>
+                <th>Cr.Hrs</th>
+                <th>Total</th>
+                <th>Grade</th>
+                <th>GP</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${semCourses.map(c => `
+                <tr>
+                  <td>${c.code || '-'}</td>
+                  <td>${c.course}</td>
+                  <td style="text-align:center;">${c.credit}</td>
+                  <td style="text-align:center;">${c.total}</td>
+                  <td style="text-align:center;">${c.grade}</td>
+                  <td style="text-align:center;">${c.gp.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div class="sem-summary">
+            Total: <b>${semTotal.toFixed(1)}/${semMaxTotal}</b> &nbsp;
+            ${semPercentage.toFixed(2)}% &nbsp;
+            GPA: <b>${semGPA.toFixed(2)}</b> &nbsp;
+            CGPA: <b>${cgpaSoFar.toFixed(2)}</b>
+          </div>
+        </div>
+      `;
+      semesterBlocks.push(blockHTML);
+    });
+
+    // Pair semesters two-per-row (like a real transcript) to keep it compact
+    let semesterBlocksHTML = '<div class="sem-grid">';
+    semesterBlocks.forEach(b => { semesterBlocksHTML += b; });
+    semesterBlocksHTML += '</div>';
+
+    const finalCGPA = cumulativeCH > 0 ? (cumulativePoints / cumulativeCH) : 0;
+    const collegeName = collegeNameSidebar.innerText;
+
+    const win = window.open('', '_blank');
+    if (!win) { alert('Popup blocked! Please allow popups for this page and try again.'); return; }
+    win.document.write(`
+      <html>
+      <head>
+        <title>Transcript - ${studentName}</title>
+        <style>
+          @page { size: A4; margin: 12mm; }
+          * { box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; padding: 15px; color:#111; font-size:11px; }
+          h1 { text-align:center; font-size:17px; margin-bottom:0; }
+          .tagline { text-align:center; font-size:11px; color:#555; margin-bottom:8px;}
+          .title { text-align:center; font-weight:bold; margin-bottom:10px; text-decoration:underline; font-size:13px; }
+          .info-grid { display:grid; grid-template-columns: 1fr 1fr; gap:3px 30px; font-size:11px; margin-bottom:10px; }
+          .sem-grid { display:grid; grid-template-columns: 1fr 1fr; gap:0 20px; }
+          .sem-block { margin-bottom:8px; break-inside: avoid; }
+          .sem-block b { font-size:11.5px; }
+          table { width:100%; border-collapse:collapse; margin-top:3px; font-size:10px; }
+          th, td { border:1px solid #999; padding:2px 4px; }
+          th { background:#f3f4f6; }
+          .sem-summary { font-size:10px; margin-top:2px; }
+          .cgpa-box { margin-top:10px; font-size:13px; font-weight:bold; text-align:center; }
+          .sign { display:flex; justify-content:space-between; margin-top:30px; font-size:11px; }
+        </style>
+      </head>
+      <body>
+        <h1>${collegeName}</h1>
+        <div class="tagline">${topbarText.innerText}</div>
+        <div class="title">ACADEMIC TRANSCRIPT</div>
+        <div class="info-grid">
+          <div><b>Name:</b> ${studentName}</div>
+          <div><b>Roll No:</b> ${admission ? admission.rollNo || '-' : '-'}</div>
+          <div><b>Father Name:</b> ${admission ? admission.father : ''}</div>
+          <div><b>Program:</b> ${admission ? admission.program : ''}</div>
+          <div><b>Session:</b> ${admission ? admission.session : ''}</div>
+          <div><b>CNIC / B-Form:</b> ${admission ? admission.cnic : ''}</div>
+        </div>
+        ${semesterBlocksHTML}
+        <div class="cgpa-box">Cumulative CGPA: ${finalCGPA.toFixed(2)} (${cumulativeCH} credit hours)</div>
+        <div class="sign">
+          <div>_______________________<br>BS Coordinator</div>
+          <div>_______________________<br>Controller of Examinations</div>
+        </div>
+      </body>
+      </html>
+    `);
+    win.document.close();
+    setTimeout(function() { win.print(); }, 400);
+  }
+
+  // ===== PASS / FAIL LIST =====
+  let currentPassFailList = [];
+
+  function renderPassFail(type) {
+    const sem = parseInt(pfSemester.value);
+    const studentsInSem = [...new Set(examMarks.filter(m => parseInt(m.semester) === sem).map(m => m.student))];
+
+    let list = studentsInSem.map(name => {
+      const admission = admissions.find(a => a.name === name);
+      const semCourses = examMarks.filter(m => m.student === name && parseInt(m.semester) === sem);
+      const totalMarks = semCourses.reduce((s,c) => s + c.total, 0);
+      const maxMarks = semCourses.length * 100;
+      const percentage = maxMarks > 0 ? (totalMarks / maxMarks * 100) : 0;
+      const hasFail = semCourses.some(c => c.grade === 'F');
+      return {
+        name, program: admission ? admission.program : '', session: admission ? admission.session : '',
+        percentage: percentage.toFixed(2), status: hasFail ? 'Fail' : 'Pass'
+      };
+    }).filter(s => (type === 'pass' ? s.status === 'Pass' : s.status === 'Fail'));
+
+    currentPassFailList = list;
+
+    passFailTable.innerHTML = list.map(s => `
+      <tr><td>${s.name}</td><td>${s.program}</td><td>${s.session}</td><td>${s.percentage}%</td>
+      <td style="color:${s.status==='Pass' ? '#059669' : '#dc2626'};">${s.status}</td></tr>
+    `).join('') || `<tr class="empty-row"><td colspan="5">No ${type} students found for this semester.</td></tr>`;
+  }
+
+  // ===== TIMETABLE =====
+  document.getElementById('timetableForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const record = { id: newId(), day: ttDay.value, time: ttTime.value, course: ttCourse.value, faculty: ttFaculty.value, program: ttProgram.value, semester: parseInt(ttSemester.value), room: ttRoom.value };
+    timetable.push(record);
+    sbInsert('timetable', record);
+    this.reset();
+    renderTimetable();
+  });
+  function deleteTimetable(i) {
+    const record = timetable[i];
+    timetable.splice(i,1);
+    if (record) sbDelete('timetable', record.id);
+    renderTimetable();
+  }
+  function renderTimetable() {
+    timetableTable.innerHTML = timetable.map((t,i) => `
+      <tr><td>${t.day}</td><td>${t.time}</td><td>${t.course}</td><td>${t.faculty}</td><td>${t.program}</td><td>${t.semester}</td><td>${t.room}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteTimetable(${i})">Delete</button></td></tr>
+    `).join('') || `<tr class="empty-row"><td colspan="8">No timetable entries yet.</td></tr>`;
+  }
+
+  // ===== DATESHEET =====
+  document.getElementById('datesheetForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const record = { id: newId(), date: dsDate.value, time: dsTime.value, course: dsCourse.value, program: dsProgram.value, semester: parseInt(dsSemester.value), room: dsRoom.value };
+    datesheet.push(record);
+    sbInsert('datesheet', record);
+    this.reset();
+    renderDatesheet();
+  });
+  function deleteDatesheet(i) {
+    const record = datesheet[i];
+    datesheet.splice(i,1);
+    if (record) sbDelete('datesheet', record.id);
+    renderDatesheet();
+  }
+  function renderDatesheet() {
+    datesheetTable.innerHTML = datesheet
+      .slice()
+      .sort((a,b) => new Date(a.date) - new Date(b.date))
+      .map((d) => {
+        const i = datesheet.indexOf(d);
+        return `<tr><td>${d.date}</td><td>${d.time}</td><td>${d.course}</td><td>${d.program}</td><td>${d.semester}</td><td>${d.room}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteDatesheet(${i})">Delete</button></td></tr>`;
+      }).join('') || `<tr class="empty-row"><td colspan="7">No datesheet entries yet.</td></tr>`;
+  }
+
+  // ===== MERIT & RESULTS =====
+
+  // Switch between the "Results" and "Merit List" sub-tabs
+  function switchMeritSubTab(tab) {
+    if (tab === 'results') {
+      resultsSubTab.style.display = 'block';
+      meritListSubTab.style.display = 'none';
+      resultsTabBtn.classList.remove('btn-outline');
+      meritListTabBtn.classList.add('btn-outline');
+    } else {
+      resultsSubTab.style.display = 'none';
+      meritListSubTab.style.display = 'block';
+      resultsTabBtn.classList.add('btn-outline');
+      meritListTabBtn.classList.remove('btn-outline');
+    }
+  }
+
+  // Computes each student's OVERALL CGPA (across all their semesters/courses combined)
+  function calcOverallCGPA(studentName) {
+    const recs = examMarks.filter(m => m.student === studentName);
+    if (!recs.length) return null;
+    const totalCH = recs.reduce((s,c) => s + c.credit, 0);
+    const totalPoints = recs.reduce((s,c) => s + (c.gp * c.credit), 0);
+    return totalCH > 0 ? (totalPoints / totalCH) : 0;
+  }
+
+  // CGPA up to (and including) a specific semester for one student
+  function calcCGPAUpToSemester(studentName, semester) {
+    const recs = examMarks.filter(m => m.student === studentName && parseInt(m.semester) <= semester);
+    if (!recs.length) return null;
+    const totalCH = recs.reduce((s,c) => s + c.credit, 0);
+    const totalPoints = recs.reduce((s,c) => s + (c.gp * c.credit), 0);
+    return totalCH > 0 ? (totalPoints / totalCH) : 0;
+  }
+
+  let currentResultsList = [];
+  let currentResultsCourses = [];
+
+  // Navigate to Reports page and show a specific student's GPA/CGPA report
+  function goToStudentReport(name) {
+    document.querySelector(".menu-item[onclick*=\"'reports'\"]").click();
+    reportStudent.value = name;
+    renderReport();
+  }
+
+  // Navigate to Add Result page prefilled for a specific course, so a failed subject can be corrected/reviewed
+  function goToAddResultForCourse(session, program, semester, courseName) {
+    document.querySelector(".menu-item[onclick*=\"'addresult'\"]").click();
+    arSession.value = session;
+    arProgram.value = program;
+    arSemester.value = semester;
+    populateAddResultCourses();
+    arCourse.value = courseName;
+    autoFillArCredit();
+    loadAddResultSheet();
+  }
+
+  // Build the detailed subject-wise Results table (S.No, Roll No, Name, F/Name, per-subject marks, Total, %, Grade, GPA, CGPA, Promotion, Failed Subjects)
+  // Custom promotion rule (per college policy):
+  // Semester 1: promote if semester GPA >= 1.00
+  // Semester 2: promote if cumulative CGPA (up to sem 2) >= 1.50
+  // Semester 3: promote if cumulative CGPA (up to sem 3) >= 1.75
+  // Semester 4-8: promote if cumulative CGPA >= 2.00
+  // A student can still be promoted even with failed subject(s) — those subjects
+  // can be repeated any time up until the end of semester 8.
+  function getPromotionThreshold(semester) {
+    if (semester === 1) return { type: 'gpa', value: 1.00 };
+    if (semester === 2) return { type: 'cgpa', value: 1.50 };
+    if (semester === 3) return { type: 'cgpa', value: 1.75 };
+    return { type: 'cgpa', value: 2.00 }; // semesters 4-8
+  }
+
+  function checkPromotion(semester, gpa, cgpa) {
+    const threshold = getPromotionThreshold(semester);
+    const value = threshold.type === 'gpa' ? gpa : cgpa;
+    return value >= threshold.value;
+  }
+
+  function renderResultsTable() {
+    const session = resSession.value;
+    const program = resProgram.value;
+    const semester = parseInt(resSemester.value);
+
+    const semCourses = courses.filter(c => c.semester === semester).sort((a,b) => a.name.localeCompare(b.name));
+    currentResultsCourses = semCourses;
+
+    const matchingStudents = admissions.filter(a => (!session || a.session === session) && (!program || a.program === program));
+
+    if (!matchingStudents.length || !semCourses.length) {
+      resultsTableHead.innerHTML = `<tr><th>#</th><th>Roll No</th><th>Name</th><th>F/Name</th><th>Total</th><th>%age</th><th>Grade</th><th>GPA</th><th>CGPA</th><th>Promotion</th><th>Failed Subjects</th></tr>`;
+      resultsTableBody.innerHTML = `<tr class="empty-row"><td colspan="11">No students or no courses found for this selection.</td></tr>`;
+      currentResultsList = [];
+      return;
+    }
+
+    // Build header: fixed columns + one column per subject (code + name)
+    resultsTableHead.innerHTML = `
+      <tr>
+        <th>#</th><th>Roll No</th><th>Name</th><th>F/Name</th>
+        ${semCourses.map(c => `<th>${c.code ? c.code + '<br>' : ''}${c.name}</th>`).join('')}
+        <th>Total</th><th>%age</th><th>Grade</th><th>GPA</th><th>CGPA</th><th>Promotion</th><th>Failed Subjects</th>
+      </tr>
+    `;
+
+    const maxTotal = semCourses.length * 100;
+    const list = [];
+
+    matchingStudents.forEach((a, idx) => {
+      const marksByCourse = semCourses.map(c => examMarks.find(m => m.student === a.name && m.course === c.name && parseInt(m.semester) === semester));
+      const obtainedTotal = marksByCourse.reduce((s,m) => s + (m ? m.total : 0), 0);
+      const percentage = maxTotal > 0 ? (obtainedTotal / maxTotal * 100) : 0;
+      const overallGrade = marksToGrade(percentage);
+
+      const semCH = marksByCourse.filter(Boolean).reduce((s,m) => s + m.credit, 0);
+      const semPoints = marksByCourse.filter(Boolean).reduce((s,m) => s + (m.gp * m.credit), 0);
+      const gpa = semCH > 0 ? (semPoints / semCH) : 0;
+      const cgpa = calcCGPAUpToSemester(a.name, semester) || 0;
+
+      const failedCourses = semCourses.filter((c,i) => marksByCourse[i] && marksByCourse[i].grade === 'F');
+      const hasAnyResult = marksByCourse.some(Boolean);
+      // Promotion follows the semester-specific GPA/CGPA threshold — failed subjects
+      // do NOT block promotion, they can simply be repeated later.
+      const promotion = !hasAnyResult ? '—' : (checkPromotion(semester, gpa, cgpa) ? 'Promoted' : 'Not Promoted');
+
+      list.push({ rollNo: a.rollNo || '-', name: a.name, father: a.father, program: a.program, session: a.session,
+        marksByCourse, obtainedTotal, maxTotal, percentage, grade: overallGrade, gpa, cgpa, promotion, failedCourses });
+    });
+
+    currentResultsList = list;
+
+    resultsTableBody.innerHTML = list.map((r, i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td><span style="color:#6d28d9; cursor:pointer; text-decoration:underline;" onclick="goToStudentReport('${r.name}')">${r.rollNo}</span></td>
+        <td><span style="color:#6d28d9; cursor:pointer; text-decoration:underline;" onclick="goToStudentReport('${r.name}')">${r.name}</span></td>
+        <td>${r.father}</td>
+        ${r.marksByCourse.map((m, ci) => `<td style="text-align:center;"><span style="color:${m && m.grade==='F' ? '#dc2626' : '#6d28d9'}; cursor:pointer; text-decoration:underline;" onclick="goToAddResultForCourse('${r.session}','${r.program}',${semester},'${semCourses[ci].name}')">${m ? m.total : '-'}</span></td>`).join('')}
+        <td>${r.obtainedTotal}/${r.maxTotal}</td>
+        <td>${r.percentage.toFixed(2)}%</td>
+        <td>${r.grade}</td>
+        <td>${r.gpa.toFixed(2)}</td>
+        <td>${r.cgpa.toFixed(2)}</td>
+        <td style="color:${r.promotion==='Promoted' ? '#059669' : r.promotion==='Not Promoted' ? '#dc2626' : '#9ca3af'};">${r.promotion}</td>
+        <td>${r.failedCourses.length
+          ? r.failedCourses.map(c => `<span style="color:#dc2626; cursor:pointer; text-decoration:underline;" onclick="goToAddResultForCourse('${r.session}','${r.program}',${semester},'${c.name}')">${c.code || c.name}</span>`).join(', ')
+          : '—'}</td>
+      </tr>
+    `).join('');
+  }
+
+  function exportResultsTable() {
+    if (!currentResultsList.length) { alert('Generate results first.'); return; }
+    const rows = currentResultsList.map((r,i) => {
+      const row = { '#': i+1, 'Roll No': r.rollNo, Name: r.name, 'F/Name': r.father };
+      currentResultsCourses.forEach((c, ci) => { row[c.code || c.name] = r.marksByCourse[ci] ? r.marksByCourse[ci].total : '-'; });
+      row['Total'] = r.obtainedTotal + '/' + r.maxTotal;
+      row['%age'] = r.percentage.toFixed(2);
+      row['Grade'] = r.grade;
+      row['GPA'] = r.gpa.toFixed(2);
+      row['CGPA'] = r.cgpa.toFixed(2);
+      row['Promotion'] = r.promotion;
+      row['Failed Subjects'] = r.failedCourses.map(c => c.code || c.name).join(', ') || '-';
+      return row;
+    });
+    exportCSV(rows, 'results_semester.csv');
+  }
+
+  let currentMeritList = [];
+  let currentMeritBasis = 8;
+
+  function renderMerit() {
+    const session = meritSession.value;
+    const program = meritProgram.value;
+    const basis = parseInt(meritBasisSemester.value);
+
+    // Header: S.No, Roll No, Name, CNIC, Contact No, Department/Program, Session, Current Semester,
+    // then one GPA column per semester from 1 up to the chosen basis, then Current CGPA + Total CGPA (as of basis)
+    let headerHTML = `<tr><th>S.No</th><th>Roll No</th><th>Name</th><th>CNIC</th><th>Contact No</th><th>Department/Program</th><th>Session</th><th>Current Semester</th>`;
+    for (let sem = 1; sem <= basis; sem++) headerHTML += `<th>GPA ${sem}</th>`;
+    headerHTML += `<th>Current CGPA</th><th>Total CGPA</th></tr>`;
+    meritTableHead.innerHTML = headerHTML;
+
+    let list = admissions.filter(a => (!session || a.session === session) && (!program || a.program === program));
+
+    list = list.map(a => {
+      const semGPAs = [];
+      for (let sem = 1; sem <= basis; sem++) {
+        const semCourses = examMarks.filter(m => m.student === a.name && parseInt(m.semester) === sem);
+        const ch = semCourses.reduce((s,c) => s + c.credit, 0);
+        const pts = semCourses.reduce((s,c) => s + (c.gp * c.credit), 0);
+        semGPAs.push(ch > 0 ? (pts / ch) : null);
+      }
+      const currentCGPA = calcOverallCGPA(a.name); // overall, based on all marks entered so far
+      const totalCGPA = calcCGPAUpToSemester(a.name, basis); // strictly up to the chosen basis semester
+
+      return { rollNo: a.rollNo || '-', name: a.name, cnic: a.cnic, phone: a.phone, program: a.program,
+        session: a.session, currentSemester: a.currentSemester || 1, semGPAs,
+        currentCGPA: currentCGPA, totalCGPA: totalCGPA };
+    }).filter(s => s.totalCGPA !== null) // only students who actually have results up to the basis semester
+      .sort((a,b) => b.totalCGPA - a.totalCGPA);
+
+    currentMeritList = list;
+    currentMeritBasis = basis;
+
+    meritTable.innerHTML = list.map((s,i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td><span style="color:#6d28d9; cursor:pointer; text-decoration:underline;" onclick="goToStudentReport('${s.name}')">${s.rollNo}</span></td>
+        <td><span style="color:#6d28d9; cursor:pointer; text-decoration:underline;" onclick="goToStudentReport('${s.name}')">${s.name}</span></td>
+        <td>${s.cnic}</td>
+        <td>${s.phone}</td>
+        <td>${s.program}</td>
+        <td>${s.session}</td>
+        <td>${s.currentSemester}</td>
+        ${s.semGPAs.map(g => `<td style="text-align:center;">${g !== null ? g.toFixed(2) : '-'}</td>`).join('')}
+        <td>${s.currentCGPA !== null ? s.currentCGPA.toFixed(2) : '-'}</td>
+        <td><b>${s.totalCGPA.toFixed(2)}</b></td>
+      </tr>
+    `).join('') || `<tr class="empty-row"><td colspan="${8 + basis + 2}">No students with results up to Semester ${basis} found.</td></tr>`;
+  }
+
+  function exportMerit() {
+    if (!currentMeritList.length) { alert('Generate the scholarship list first.'); return; }
+    const rows = currentMeritList.map((s,i) => {
+      const row = { 'S.No': i+1, 'Roll No': s.rollNo, Name: s.name, CNIC: s.cnic, 'Contact No': s.phone,
+        'Department/Program': s.program, Session: s.session, 'Current Semester': s.currentSemester };
+      s.semGPAs.forEach((g, gi) => { row['GPA ' + (gi+1)] = g !== null ? g.toFixed(2) : '-'; });
+      row['Current CGPA'] = s.currentCGPA !== null ? s.currentCGPA.toFixed(2) : '-';
+      row['Total CGPA'] = s.totalCGPA.toFixed(2);
+      return row;
+    });
+    exportCSV(rows, 'scholarships.csv');
+  }
+
+  function printMeritList() {
+    if (!currentMeritList.length) { alert('Generate the scholarship list first.'); return; }
+    const collegeName = collegeNameSidebar.innerText;
+    const basis = currentMeritBasis;
+    const session = meritSession.value || 'All Sessions';
+    const program = meritProgram.value || 'All Programs';
+
+    let headCells = `<th>S.No</th><th>Roll No</th><th>Name</th><th>CNIC</th><th>Contact No</th><th>Program</th><th>Session</th><th>Cur. Sem</th>`;
+    for (let sem = 1; sem <= basis; sem++) headCells += `<th>GPA ${sem}</th>`;
+    headCells += `<th>Current CGPA</th><th>Total CGPA</th>`;
+
+    const rowsHTML = currentMeritList.map((s,i) => `
+      <tr>
+        <td style="border:1px solid #999; padding:5px; text-align:center;">${i+1}</td>
+        <td style="border:1px solid #999; padding:5px;">${s.rollNo}</td>
+        <td style="border:1px solid #999; padding:5px;">${s.name}</td>
+        <td style="border:1px solid #999; padding:5px;">${s.cnic}</td>
+        <td style="border:1px solid #999; padding:5px;">${s.phone}</td>
+        <td style="border:1px solid #999; padding:5px;">${s.program}</td>
+        <td style="border:1px solid #999; padding:5px;">${s.session}</td>
+        <td style="border:1px solid #999; padding:5px; text-align:center;">${s.currentSemester}</td>
+        ${s.semGPAs.map(g => `<td style="border:1px solid #999; padding:5px; text-align:center;">${g !== null ? g.toFixed(2) : '-'}</td>`).join('')}
+        <td style="border:1px solid #999; padding:5px; text-align:center;">${s.currentCGPA !== null ? s.currentCGPA.toFixed(2) : '-'}</td>
+        <td style="border:1px solid #999; padding:5px; text-align:center;"><b>${s.totalCGPA.toFixed(2)}</b></td>
+      </tr>
+    `).join('');
+
+    const win = window.open('', '_blank');
+    if (!win) { alert('Popup blocked! Please allow popups for this page and try again.'); return; }
+    win.document.write(`
+      <html>
+      <head>
+        <title>Scholarships</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding:30px; color:#111; }
+          h1 { text-align:center; font-size:20px; margin-bottom:0; }
+          .tagline { text-align:center; font-size:13px; color:#555; margin-bottom:15px; }
+          .title { text-align:center; font-weight:bold; text-decoration:underline; margin-bottom:15px; font-size:16px; }
+          .filters { text-align:center; font-size:13px; margin-bottom:20px; color:#333; }
+          table { width:100%; border-collapse:collapse; font-size:11px; }
+          th { border:1px solid #999; padding:5px; background:#f3f4f6; }
+          .sign { display:flex; justify-content:space-between; margin-top:50px; font-size:13px; }
+        </style>
+      </head>
+      <body>
+        <h1>${collegeName}</h1>
+        <div class="tagline">${topbarText.innerText}</div>
+        <div class="title">SCHOLARSHIP ELIGIBILITY LIST</div>
+        <div class="filters">Session: <b>${session}</b> &nbsp; | &nbsp; Program: <b>${program}</b> &nbsp; | &nbsp; Based on: <b>Semester ${basis}</b></div>
+        <table>
+          <thead><tr>${headCells}</tr></thead>
+          <tbody>${rowsHTML}</tbody>
+        </table>
+        <div class="sign">
+          <div>_______________________<br>BS Coordinator</div>
+          <div>_______________________<br>Controller of Examinations</div>
+        </div>
+      </body>
+      </html>
+    `);
+    win.document.close();
+    setTimeout(function() { win.print(); }, 400);
+  }
+
+  // ===== FEE =====
+  document.getElementById('feeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const record = {
+      id: newId(), student: feeStudent.value, type: feeType.value, semester: feeSemester.value,
+      amount: parseFloat(feeAmount.value), dueDate: feeDueDate.value, status: feeStatus.value
+    };
+    feeRecords.push(record);
+    sbInsert('fee_records', { id: record.id, student: record.student, type: record.type, semester: record.semester.toString(),
+      amount: record.amount, due_date: record.dueDate, status: record.status });
+    this.reset();
+    renderFee();
+  });
+
+  function deleteFee(i) {
+    const record = feeRecords[i];
+    feeRecords.splice(i,1);
+    if (record) sbDelete('fee_records', record.id);
+    renderFee();
+  }
+
+  function toggleFeeStatus(i) {
+    if (feeRecords[i].status === 'Upcoming') { alert('This semester has not been reached yet, so this fee is not due.'); return; }
+    feeRecords[i].status = feeRecords[i].status === 'Paid' ? 'Unpaid' : 'Paid';
+    sbUpdate('fee_records', feeRecords[i].id, { status: feeRecords[i].status });
+    renderFee();
+  }
+
+  // ----- Fee Structure Lock -----
+  function lockFeeStructure() {
+    const admissionFee = parseFloat(settingAdmissionFee.value) || 0;
+    const semesterFee = parseFloat(settingSemesterFee.value) || 0;
+    if (!confirm('Lock Admission Fee = Rs.' + admissionFee + ' and Semester Fee = Rs.' + semesterFee + ' for all students? You can unlock later to change.')) return;
+    feeSettings = { admissionFee, semesterFee, locked: true };
+    settingAdmissionFee.disabled = true;
+    settingSemesterFee.disabled = true;
+    feeLockBtn.style.display = 'none';
+    feeUnlockBtn.style.display = 'inline-block';
+    feeLockNote.innerText = '🔒 Locked — Admission Fee: Rs.' + admissionFee + ' | Semester Fee: Rs.' + semesterFee + ' per semester.';
+    sbUpdate('app_settings', 'main', { admission_fee: admissionFee, semester_fee: semesterFee, fee_locked: true });
+    alert('Fee structure locked!');
+  }
+
+  function unlockFeeStructure() {
+    if (!confirm('Unlock fee structure for editing?')) return;
+    feeSettings.locked = false;
+    settingAdmissionFee.disabled = false;
+    settingSemesterFee.disabled = false;
+    feeLockBtn.style.display = 'inline-block';
+    feeUnlockBtn.style.display = 'none';
+    feeLockNote.innerText = 'Set the fixed amounts once, then lock them to prevent accidental changes.';
+    sbUpdate('app_settings', 'main', { fee_locked: false });
+  }
+
+  // ----- Auto-generate fee records for all students based on locked fee structure -----
+  function generateFeeForAllStudents() {
+    if (!feeSettings.locked) { alert('Please set and lock the Fee Structure in Settings first.'); return; }
+    if (!admissions.length) { alert('No students found. Add admissions first.'); return; }
+
+    let addedCount = 0;
+
+    admissions.forEach(a => {
+      const currentSem = a.currentSemester || 1;
+
+      // Admission Fee — one-time, always due
+      const hasAdmissionFee = feeRecords.some(f => f.student === a.name && f.type === 'Admission Fee');
+      if (!hasAdmissionFee) {
+        const record = {
+          id: newId(), student: a.name, type: 'Admission Fee', semester: '-',
+          amount: feeSettings.admissionFee, dueDate: new Date().toISOString().split('T')[0],
+          status: 'Unpaid'
+        };
+        feeRecords.push(record);
+        sbInsert('fee_records', { id: record.id, student: record.student, type: record.type, semester: record.semester,
+          amount: record.amount, due_date: record.dueDate, status: record.status });
+        addedCount++;
+      }
+
+      // Semester Fee for every semester 1..8
+      for (let sem = 1; sem <= 8; sem++) {
+        const exists = feeRecords.some(f => f.student === a.name && f.type === 'Tuition Fee' && parseInt(f.semester) === sem);
+        if (exists) continue;
+
+        // Reached or currently in this semester => due (Unpaid). Not reached yet => Upcoming (shown but not pending).
+        const status = sem <= currentSem ? 'Unpaid' : 'Upcoming';
+        const record = {
+          id: newId(), student: a.name, type: 'Tuition Fee', semester: sem,
+          amount: feeSettings.semesterFee, dueDate: '', status: status
+        };
+        feeRecords.push(record);
+        sbInsert('fee_records', { id: record.id, student: record.student, type: record.type, semester: record.semester.toString(),
+          amount: record.amount, due_date: record.dueDate, status: record.status });
+        addedCount++;
+      }
+    });
+
+    renderFee();
+    alert(addedCount + ' fee record(s) generated for all students.');
+  }
+
+  function renderFee() {
+    feeTable.innerHTML = feeRecords.map((f,i) => {
+      let color = '#dc2626', label = f.status;
+      if (f.status === 'Paid') color = '#059669';
+      if (f.status === 'Upcoming') { color = '#9ca3af'; label = 'Not Due Yet'; }
+      return `
+      <tr>
+        <td>${f.student}</td><td>${f.type}</td><td>${f.semester}</td>
+        <td>Rs. ${f.amount.toLocaleString()}</td><td>${f.dueDate || '-'}</td>
+        <td>
+          <span onclick="toggleFeeStatus(${i})" style="cursor:${f.status==='Upcoming' ? 'default' : 'pointer'}; color:${color}; font-weight:600;">
+            ${label}
+          </span>
+        </td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteFee(${i})">Delete</button></td>
+      </tr>
+    `;
+    }).join('') || `<tr class="empty-row"><td colspan="7">No fee records yet.</td></tr>`;
+
+    const collected = feeRecords.filter(f => f.status === 'Paid').reduce((s,f) => s + f.amount, 0);
+    const pending = feeRecords.filter(f => f.status === 'Unpaid').reduce((s,f) => s + f.amount, 0);
+    feeTotalCollected.innerText = collected.toLocaleString();
+    feeTotalPending.innerText = pending.toLocaleString();
+  }
+
+  // ----- Fee Status Report (filter by student / program / session) -----
+  function renderFeeStatusReport() {
+    const studentFilter = feeReportStudent.value;
+    const programFilter = feeReportProgram.value;
+    const sessionFilter = feeReportSession.value;
+
+    // Build list of matching student names based on program/session filters
+    const matchingStudents = admissions.filter(a =>
+      (!studentFilter || a.name === studentFilter) &&
+      (!programFilter || a.program === programFilter) &&
+      (!sessionFilter || a.session === sessionFilter)
+    ).map(a => a.name);
+
+    const filtered = feeRecords.filter(f => matchingStudents.includes(f.student));
+
+    const paid = filtered.filter(f => f.status === 'Paid').reduce((s,f) => s + f.amount, 0);
+    const unpaid = filtered.filter(f => f.status === 'Unpaid').reduce((s,f) => s + f.amount, 0);
+    const upcoming = filtered.filter(f => f.status === 'Upcoming').reduce((s,f) => s + f.amount, 0);
+    const total = paid + unpaid + upcoming;
+
+    feeReportPaid.innerText = 'Rs. ' + paid.toLocaleString();
+    feeReportUnpaid.innerText = 'Rs. ' + unpaid.toLocaleString();
+    feeReportUpcoming.innerText = 'Rs. ' + upcoming.toLocaleString();
+    feeReportTotal.innerText = 'Rs. ' + total.toLocaleString();
+
+    feeReportTable.innerHTML = filtered.map(f => {
+      let color = '#dc2626', label = f.status;
+      if (f.status === 'Paid') color = '#059669';
+      if (f.status === 'Upcoming') { color = '#9ca3af'; label = 'Not Due Yet'; }
+      return `<tr><td>${f.student}</td><td>${f.type}</td><td>${f.semester}</td><td>Rs. ${f.amount.toLocaleString()}</td>
+        <td style="color:${color}; font-weight:600;">${label}</td></tr>`;
+    }).join('') || `<tr class="empty-row"><td colspan="5">No fee records found for this selection.</td></tr>`;
+  }
+
+  // ===== USERS =====
+  document.getElementById('userForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const record = { id: newId(), username: userUsername.value, fullname: userFullName.value, email: userEmail.value, role: userRole.value, status: userStatus.value };
+    users.push(record);
+    sbInsert('users', record);
+    this.reset();
+    renderUsers();
+  });
+  function deleteUser(i) {
+    const record = users[i];
+    users.splice(i,1);
+    if (record) sbDelete('users', record.id);
+    renderUsers();
+  }
+  function renderUsers() {
+    usersTable.innerHTML = users.map((u,i) => `
+      <tr><td>${u.username}</td><td>${u.fullname}</td><td>${u.email}</td><td>${u.role}</td>
+      <td style="color:${u.status==='Active' ? '#059669' : '#dc2626'};">${u.status}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteUser(${i})">Delete</button></td></tr>
+    `).join('');
+  }
+
+  // ===== SETTINGS =====
+  function saveSettings() {
+    const name = settingCollegeName.value.trim();
+    const tagline = settingTagline.value.trim();
+    const file = settingLogo.files[0];
+
+    if (name) {
+      collegeNameSidebar.innerText = name;
+    }
+    document.title = (name || 'My College') + ' — Management System';
+    topbarText.innerText = (name || 'My College') + (tagline ? ' — ' + tagline : '');
+    sbUpdate('app_settings', 'main', { college_name: name || 'My College', tagline: tagline });
+
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        collegeLogoImg.src = e.target.result;
+        collegeLogoImg.style.display = 'block';
+        sbUpdate('app_settings', 'main', { logo_data: e.target.result });
+      };
+      reader.readAsDataURL(file);
+    }
+    alert('Settings saved!');
+  }
+
+  // ===== DUMMY / TEST DATA GENERATOR =====
+  async function generateDummyData() {
+    if (admissions.length || faculty.length || courses.length) {
+      if (!confirm('This will ADD demo data on top of existing data. Continue?')) return;
+    }
+
+    const programsList = ['BS Computer Science','BS Mathematics','BS Physics','BS Chemistry','BS English'];
+    const sessionsList = ['2024-2028','2025-2029','2026-2030'];
+    const deptNames = ['Computer Science','Mathematics','Physics','Chemistry','English','Botany','Zoology','Economics','Statistics','Islamic Studies'];
+
+    // 10 Departments
+    const newDepartments = deptNames.map((d,i) => ({ id: newId(), name: d, code: 'DEPT-' + (i+1).toString().padStart(2,'0'), hod: 'Dr. ' + d + ' Head' }));
+    departments.push(...newDepartments);
+
+    // 50 Faculty
+    const designations = ['Lecturer','Assistant Professor','Associate Professor','Professor'];
+    const newFaculty = [];
+    for (let i = 1; i <= 50; i++) {
+      const dept = deptNames[i % deptNames.length];
+      newFaculty.push({
+        id: newId(), name: 'Faculty Member ' + i,
+        designation: designations[i % designations.length],
+        department: dept,
+        phone: '03' + (100000000 + i * 137).toString().slice(0,9),
+        email: 'faculty' + i + '@gbpgc.edu.pk'
+      });
+    }
+    faculty.push(...newFaculty);
+
+    // 40 Courses — 5 per semester across 8 semesters
+    const newCourses = [];
+    for (let sem = 1; sem <= 8; sem++) {
+      for (let n = 1; n <= 5; n++) {
+        const dept = deptNames[(sem + n) % deptNames.length];
+        newCourses.push({ id: newId(), name: 'Course S' + sem + '-' + n, code: 'C' + sem + '0' + n, credit: 3, department: dept, semester: sem });
+      }
+    }
+    courses.push(...newCourses);
+
+    // 40 Students (Admissions)
+    const studentNames = [];
+    const newAdmissions = [];
+    const statusPool = ['Active','Active','Active','Active','Active','Active','Passed Out','Passed Out','Dropout','Quit']; // ~60% active, rest mixed
+    for (let i = 1; i <= 40; i++) {
+      const program = programsList[i % programsList.length];
+      const session = sessionsList[i % sessionsList.length];
+      const name = 'Student ' + i;
+      studentNames.push(name);
+      newAdmissions.push({
+        id: newId(), rollNo: generateRollNo(program, session),
+        name: name,
+        father: 'Father of Student ' + i,
+        cnic: '54400-' + (1000000 + i).toString() + '-1',
+        phone: '03' + (200000000 + i * 91).toString().slice(0,9),
+        program: program,
+        session: session,
+        currentSemester: (i % 8) + 1,
+        status: statusPool[i % statusPool.length]
+      });
+    }
+    admissions.push(...newAdmissions);
+
+    // Exam Marks — all 40 students across all 8 semesters (5 courses each)
+    const semesterCourses = {};
+    for (let sem = 1; sem <= 8; sem++) {
+      semesterCourses[sem] = courses.filter(c => c.semester === sem);
+    }
+
+    const newExamMarks = [];
+    studentNames.forEach(name => {
+      for (let sem = 1; sem <= 8; sem++) {
+        semesterCourses[sem].forEach(c => {
+          const total = Math.floor(Math.random() * 51) + 45; // random 45-95
+          const gp = marksToGP(total);
+          const grade = marksToGrade(total);
+          newExamMarks.push({
+            id: newId(), student: name, program: admissions.find(a => a.name === name).program,
+            course: c.name, code: c.code, semester: sem, credit: c.credit,
+            total: total, percentage: total, gp: gp, grade: grade
+          });
+        });
+      }
+    });
+    examMarks.push(...newExamMarks);
+
+    renderAll();
+    alert('Dummy data loaded! 10 Departments, 40 Courses, 50 Faculty, 40 Students, and full 8-semester results generated. Syncing to cloud in the background...');
+
+    // Bulk-insert to Supabase in the background (large batch, so this can take a few seconds)
+    if (cloudEnabled) {
+      await Promise.all([
+        db.from('departments').insert(newDepartments),
+        db.from('faculty').insert(newFaculty),
+        db.from('courses').insert(newCourses),
+        db.from('admissions').insert(newAdmissions.map(a => ({
+          id: a.id, roll_no: a.rollNo, name: a.name, father: a.father, cnic: a.cnic,
+          phone: a.phone, program: a.program, session: a.session, current_semester: a.currentSemester,
+          student_status: a.status
+        })))
+      ]);
+      await db.from('exam_marks').insert(newExamMarks);
+      console.log('Dummy data synced to Supabase.');
+    }
+  }
+
+  // Delete every row from a Supabase table (id is never null, so this clears the whole table)
+  async function sbDeleteAll(table) {
+    if (!cloudEnabled) return;
+    const { error } = await db.from(table).delete().not('id', 'is', null);
+    if (error) console.error('[Supabase deleteAll:' + table + ']', error.message);
+  }
+
+  async function clearAllData() {
+    if (!confirm('This will permanently clear ALL data (students, faculty, courses, marks, etc) — including the cloud database. Continue?')) return;
+    admissions = []; faculty = []; departments = []; courses = [];
+    attendanceRecords = {}; examMarks = []; timetable = []; datesheet = []; feeRecords = [];
+    renderAll();
+
+    if (cloudEnabled) {
+      await Promise.all([
+        sbDeleteAll('admissions'), sbDeleteAll('faculty'), sbDeleteAll('departments'), sbDeleteAll('courses'),
+        sbDeleteAll('exam_marks'), sbDeleteAll('timetable'), sbDeleteAll('datesheet'), sbDeleteAll('fee_records')
+      ]);
+    }
+    alert('All data cleared.');
+  }
+
+  // ===== RENDER ALL =====
+  // ===== DASHBOARD STATS =====
+  function renderDashboardStats() {
+    const totalStudents = admissions.length;
+    const totalSubjects = courses.length;
+    const distinctPrograms = new Set(admissions.map(a => a.program).filter(Boolean));
+    const totalPrograms = distinctPrograms.size || 5; // fallback to the 5 standard programs if no admissions yet
+    const totalDepartments = departments.length;
+    const totalFaculty = faculty.length;
+    const enrolledAll = admissions.length; // everyone ever admitted
+    const enrolledCurrent = admissions.filter(a => (a.status || 'Active') === 'Active').length;
+    const passedOut = admissions.filter(a => a.status === 'Passed Out').length;
+    const dropout = admissions.filter(a => a.status === 'Dropout').length;
+    const quit = admissions.filter(a => a.status === 'Quit').length;
+
+    // Pending Results: for each active student, count courses in their current semester that don't have a saved mark yet
+    let pendingResults = 0;
+    admissions.filter(a => (a.status || 'Active') === 'Active').forEach(a => {
+      const semCourses = courses.filter(c => c.semester === a.currentSemester);
+      semCourses.forEach(c => {
+        const hasMark = examMarks.some(m => m.student === a.name && m.course === c.name && parseInt(m.semester) === a.currentSemester);
+        if (!hasMark) pendingResults++;
+      });
+    });
+
+    const feeDues = feeRecords.filter(f => f.status === 'Unpaid').reduce((s,f) => s + f.amount, 0);
+
+    statTotalStudents.innerText = totalStudents;
+    statTotalSubjects.innerText = totalSubjects;
+    statTotalPrograms.innerText = totalPrograms;
+    statTotalDepartments.innerText = totalDepartments;
+    statTotalFaculty.innerText = totalFaculty;
+    statEnrolledAll.innerText = enrolledAll;
+    statEnrolledCurrent.innerText = enrolledCurrent;
+    statPassedOut.innerText = passedOut;
+    statDropout.innerText = dropout;
+    statQuit.innerText = quit;
+    statPendingResults.innerText = pendingResults;
+    statFeeDues.innerText = 'Rs. ' + feeDues.toLocaleString();
+  }
+
+  // ===== FEATURED PROFILES (Dashboard picture cards, editable from Settings) =====
+  let profileCards = [
+    { image: '', caption: '' },
+    { image: '', caption: '' },
+    { image: '', caption: '' },
+    { image: '', caption: '' }
+  ];
+
+  function renderProfileCards() {
+    profileCardsGrid.innerHTML = profileCards.map((p, i) => `
+      <div style="border:1px solid #e5e7eb; border-radius:8px; padding:8px; text-align:center; width:110px; flex-shrink:0;">
+        ${p.image
+          ? `<img src="${p.image}" style="width:100%; height:80px; object-fit:cover; border-radius:6px; margin-bottom:6px;">`
+          : `<div style="width:100%; height:80px; background:#f3f4f6; border-radius:6px; margin-bottom:6px; display:flex; align-items:center; justify-content:center; color:#9ca3af; font-size:10px;">No image</div>`
+        }
+        <p style="font-size:10px; color:#374151; line-height:1.3;">${p.caption || 'No caption set'}</p>
+      </div>
+    `).join('');
+  }
+
+  // Editable version of the 4 profile cards, shown inside Settings
+  function renderProfileSettings() {
+    profileSettingsGrid.innerHTML = profileCards.map((p, i) => `
+      <div style="border:1px solid #e5e7eb; border-radius:10px; padding:12px;">
+        ${p.image
+          ? `<img id="profilePreview_${i}" src="${p.image}" style="width:100%; height:120px; object-fit:cover; border-radius:8px; margin-bottom:8px;">`
+          : `<div id="profilePreview_${i}" style="width:100%; height:120px; background:#f3f4f6; border-radius:8px; margin-bottom:8px; display:flex; align-items:center; justify-content:center; color:#9ca3af; font-size:12px;">No image</div>`
+        }
+        <input type="file" accept="image/*" class="profile-image-input" data-index="${i}" onchange="handleProfileImageChange(${i}, event)" style="margin-bottom:8px; width:100%; font-size:12px;">
+        <textarea class="profile-caption-input" data-index="${i}" maxlength="220" oninput="checkProfileWordLimit(${i})" placeholder="Name / description (max 30 words)" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; font-size:12px; min-height:60px;">${p.caption || ''}</textarea>
+        <div id="profileWordCount_${i}" style="font-size:11px; color:#9ca3af; margin-top:3px;">0 / 30 words</div>
+      </div>
+    `).join('');
+
+    // Initialize word counts for existing captions
+    profileCards.forEach((p, i) => checkProfileWordLimit(i));
+  }
+
+  // Enforce a 30-word limit on the caption as the user types
+  function checkProfileWordLimit(i) {
+    const textarea = document.querySelector(`.profile-caption-input[data-index="${i}"]`);
+    const counter = document.getElementById('profileWordCount_' + i);
+    if (!textarea || !counter) return;
+
+    let words = textarea.value.trim().split(/\s+/).filter(Boolean);
+    if (words.length > 30) {
+      words = words.slice(0, 30);
+      textarea.value = words.join(' ');
+    }
+    counter.innerText = words.length + ' / 30 words';
+    counter.style.color = words.length >= 30 ? '#dc2626' : '#9ca3af';
+  }
+
+  // Convert an uploaded image file to a base64 data URL and preview it immediately
+  function handleProfileImageChange(i, event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      profileCards[i].pendingImage = e.target.result; // staged until Save is clicked
+      const preview = document.getElementById('profilePreview_' + i);
+      preview.outerHTML = `<img id="profilePreview_${i}" src="${e.target.result}" style="width:100%; height:120px; object-fit:cover; border-radius:8px; margin-bottom:8px;">`;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Persist all 4 cards (image + caption) — saves locally and to Supabase (app_settings.profile_cards)
+  function saveProfileCards() {
+    for (let i = 0; i < 4; i++) {
+      const captionEl = document.querySelector(`.profile-caption-input[data-index="${i}"]`);
+      const caption = captionEl ? captionEl.value.trim() : profileCards[i].caption;
+      const image = profileCards[i].pendingImage || profileCards[i].image;
+      profileCards[i] = { image: image, caption: caption };
+    }
+
+    renderProfileCards();
+    sbUpdate('app_settings', 'main', { profile_cards: JSON.stringify(profileCards) });
+    alert('Featured Profiles saved!');
+  }
+
+  function renderAll() {
+    renderAdmissions();
+    renderStudents();
+    renderFaculty();
+    renderDepartments();
+    renderCourses();
+    renderMarks();
+    renderTimetable();
+    renderDatesheet();
+    renderFee();
+    renderUsers();
+    renderDashboardStats();
+    renderProfileCards();
+  }
+
+  // ===== INITIAL LOAD FROM SUPABASE =====
+  // Fetches every table from the cloud database and populates the local arrays
+  // (which the rest of the app already reads from), then renders everything.
+  async function loadAllFromSupabase() {
+    if (!cloudEnabled) {
+      cloudStatusPanel.style.background = '#fee2e2';
+      cloudStatusText.innerText = '🔴 Not connected to cloud — SUPABASE_URL / ANON_KEY missing or invalid. Data will NOT be saved permanently.';
+      renderAll();
+      return;
+    }
+
+    try {
+      const [
+        admissionsData, facultyData, departmentsData, coursesData,
+        examMarksData, timetableData, datesheetData, feeData, usersData, settingsData
+      ] = await Promise.all([
+        sbFetchAll('admissions'),
+        sbFetchAll('faculty'),
+        sbFetchAll('departments'),
+        sbFetchAll('courses'),
+        sbFetchAll('exam_marks'),
+        sbFetchAll('timetable'),
+        sbFetchAll('datesheet'),
+        sbFetchAll('fee_records'),
+        sbFetchAll('users'),
+        sbFetchAll('app_settings')
+      ]);
+
+      admissions = admissionsData.map(a => ({
+        id: a.id, rollNo: a.roll_no, name: a.name, father: a.father, cnic: a.cnic,
+        phone: a.phone, program: a.program, session: a.session, currentSemester: a.current_semester,
+        status: a.student_status || 'Active'
+      }));
+      faculty = facultyData;
+      departments = departmentsData;
+      courses = coursesData.map(c => ({ ...c, credit: parseFloat(c.credit), semester: parseInt(c.semester) }));
+      examMarks = examMarksData.map(m => ({ ...m, semester: parseInt(m.semester), credit: parseFloat(m.credit),
+        total: parseFloat(m.total), percentage: parseFloat(m.percentage), gp: parseFloat(m.gp) }));
+      timetable = timetableData.map(t => ({ ...t, semester: parseInt(t.semester) }));
+      datesheet = datesheetData.map(d => ({ ...d, semester: parseInt(d.semester) }));
+      feeRecords = feeData.map(f => ({ id: f.id, student: f.student, type: f.type, semester: f.semester,
+        amount: parseFloat(f.amount), dueDate: f.due_date, status: f.status }));
+      if (usersData.length) users = usersData;
+
+      if (settingsData.length) {
+        const s = settingsData[0];
+        feeSettings = { admissionFee: parseFloat(s.admission_fee) || 0, semesterFee: parseFloat(s.semester_fee) || 0, locked: !!s.fee_locked };
+        if (s.college_name) collegeNameSidebar.innerText = s.college_name;
+        if (s.college_name || s.tagline) topbarText.innerText = (s.college_name || 'My College') + (s.tagline ? ' — ' + s.tagline : '');
+        if (s.logo_data) { collegeLogoImg.src = s.logo_data; collegeLogoImg.style.display = 'block'; }
+        if (feeSettings.locked) {
+          settingAdmissionFee.value = feeSettings.admissionFee;
+          settingSemesterFee.value = feeSettings.semesterFee;
+          settingAdmissionFee.disabled = true;
+          settingSemesterFee.disabled = true;
+          feeLockBtn.style.display = 'none';
+          feeUnlockBtn.style.display = 'inline-block';
+          feeLockNote.innerText = '🔒 Locked — Admission Fee: Rs.' + feeSettings.admissionFee + ' | Semester Fee: Rs.' + feeSettings.semesterFee + ' per semester.';
+        }
+        if (s.profile_cards) {
+          try {
+            const parsed = JSON.parse(s.profile_cards);
+            if (Array.isArray(parsed) && parsed.length === 4) profileCards = parsed;
+          } catch (e) { console.warn('Could not parse profile_cards:', e); }
+        }
+      }
+
+      cloudStatusPanel.style.background = '#d1fae5';
+      cloudStatusText.innerText = '🟢 Connected to Supabase — your data is saved permanently in the cloud.';
+    } catch (err) {
+      console.error('Error loading data from Supabase:', err);
+      cloudStatusPanel.style.background = '#fee2e2';
+      cloudStatusText.innerText = '🔴 Connection failed — check SUPABASE_URL/ANON_KEY, and that you ran the SQL schema. See browser Console (F12) for the exact error.';
+      alert('Could not load data from Supabase. Check your SUPABASE_URL/ANON_KEY and internet connection. Running with empty data for now.');
+    }
+
+    renderAll();
+  }
+
+  loadAllFromSupabase();
+</script>
+
+</body>
+</html>
