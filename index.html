@@ -2970,6 +2970,73 @@
   }
 
   loadAllFromSupabase();
+  // ==========================================
+// 🔒 VANILLA JS ROLE & PERMISSION SYSTEM
+// ==========================================
+
+// 1. Current logged in user ka role check karna (Default: 'guest')
+function GetCurrentUserRole() {
+  const savedUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+  return savedUser && savedUser.role ? savedUser.role : "guest"; 
+}
+
+// 2. Security Check Function
+function canUserModify() {
+  const role = GetCurrentUserRole();
+  return role === "super_admin" || role === "superadmin" || role === "admin"; 
+}
+
+// 3. UI Buttons ko Hide / Disable karne ka function
+function applyUIRestrictions() {
+  const isAllowed = canUserModify();
+
+  if (!isAllowed) {
+    // A) Sabhi Add, Edit, Delete buttons ko hide kar do
+    const restrictedButtons = document.querySelectorAll('.btn-delete, .btn-edit, .btn-add, button[id*="delete"], button[id*="edit"], button[id*="add"]');
+    restrictedButtons.forEach(btn => {
+      btn.style.display = 'none';
+    });
+
+    // B) Settings Menu / Tab ko Visual Lock kar do
+    const settingsTab = document.querySelector('a[href*="settings"]') || document.getElementById('settingsTab');
+    if (settingsTab) {
+      settingsTab.style.opacity = '0.4';
+      settingsTab.style.cursor = 'not-allowed';
+      settingsTab.onclick = function(e) {
+        e.preventDefault();
+        alert("⛔ Access Denied! Only Super Admin can access Settings.");
+        return false;
+      };
+    }
+  }
+}
+
+// Page load hote hi restriction apply karein
+window.addEventListener("DOMContentLoaded", applyUIRestrictions);
+// Global Click Guard: Jab bhi koi button click ho, pehle role check karega
+document.addEventListener("click", function (e) {
+  // Check karein ke clicked element Delete, Edit, ya Save wala button toh nahi?
+  const target = e.target.closest("button, .btn, a");
+  if (!target) return;
+
+  const btnText = target.innerText.toLowerCase();
+  const btnClass = target.className.toLowerCase();
+  const btnId = target.id.toLowerCase();
+
+  // Agar button Delete, Edit, Save, ya Add ka hai
+  const isRestrictedAction = 
+    btnText.includes("delete") || btnText.includes("edit") || btnText.includes("save") || btnText.includes("add") ||
+    btnClass.includes("delete") || btnClass.includes("edit") || btnClass.includes("save") ||
+    btnId.includes("delete") || btnId.includes("edit") || btnId.includes("save");
+
+  if (isRestrictedAction && !canUserModify()) {
+    e.preventDefault();
+    e.stopPropagation();
+    alert("⛔ Access Denied! Only Super Admin can perform this action.");
+  }
+}, true); // 'true' parameter event capture phase mein hi check kar ke action block kar degagit init
+
+
 </script>
 
 </body>
