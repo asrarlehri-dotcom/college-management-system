@@ -61,9 +61,77 @@
   .att-btn { padding:4px 10px; border-radius:5px; border:none; font-size:12px; cursor:pointer; }
   .att-present { background:#d1fae5; color:#059669; }
   .att-absent { background:#fee2e2; color:#dc2626; }
+
+  /* ===== DARK MODE ===== */
+  body.dark-mode { background:#0f172a; color:#e2e8f0; }
+  body.dark-mode .sidebar { background:#1e293b; border-right-color:#334155; }
+  body.dark-mode .sidebar .brand h2 { color:#f1f5f9; }
+  body.dark-mode .sidebar .brand p { color:#94a3b8; }
+  body.dark-mode .sidebar .brand { border-bottom-color:#334155; }
+  body.dark-mode .menu-item { color:#cbd5e1; }
+  body.dark-mode .menu-item:hover { background:#334155; }
+  body.dark-mode .menu-item.active { background:#4c1d95; color:#ddd6fe; border-right-color:#a78bfa; }
+  body.dark-mode .topbar { background:#1e293b; border-bottom-color:#334155; color:#cbd5e1; }
+  body.dark-mode .content h1 { color:#f1f5f9; }
+  body.dark-mode .content .subtitle { color:#94a3b8; }
+  body.dark-mode .stat-card { background:#1e293b; box-shadow:none; border:1px solid #334155; }
+  body.dark-mode .stat-card .label { color:#94a3b8; }
+  body.dark-mode .stat-card .value { color:#f1f5f9; }
+  body.dark-mode .panel { background:#1e293b; box-shadow:none; border:1px solid #334155; }
+  body.dark-mode .panel h3 { color:#f1f5f9; }
+  body.dark-mode .form-group label { color:#cbd5e1; }
+  body.dark-mode .form-group input, body.dark-mode .form-group select, body.dark-mode textarea,
+  body.dark-mode input[type=text], body.dark-mode input[type=email], body.dark-mode input[type=password],
+  body.dark-mode input[type=number], body.dark-mode input[type=date], body.dark-mode input[type=file],
+  body.dark-mode select { background:#0f172a; color:#e2e8f0; border-color:#334155; }
+  body.dark-mode .btn-outline { background:transparent; color:#a78bfa; border-color:#a78bfa; }
+  body.dark-mode .btn-outline:hover { background:#334155; }
+  body.dark-mode table { color:#e2e8f0; }
+  body.dark-mode th { color:#94a3b8; }
+  body.dark-mode th, body.dark-mode td { border-bottom-color:#334155; }
+  body.dark-mode .empty-row td { color:#64748b; }
+  body.dark-mode #authStatusText { background:#334155 !important; color:#cbd5e1 !important; }
+  body.dark-mode #cloudStatusPanel { background:#1e293b !important; color:#94a3b8 !important; border-bottom-color:#334155 !important; }
 </style>
 </head>
 <body>
+
+  <!-- LOGIN MODAL -->
+  <div id="loginModalOverlay" style="display:none; position:fixed; inset:0; background:rgba(17,24,39,0.55); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:12px; padding:28px; width:320px; box-shadow:0 10px 30px rgba(0,0,0,0.25);">
+      <h3 style="margin-bottom:4px; color:#111827;">🔐 Login</h3>
+      <p style="font-size:12px; color:#9ca3af; margin-bottom:16px;">Sirf authorized users hi login kar saktay hain.</p>
+      <form id="loginForm">
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>Username</label>
+          <input type="text" id="loginUsername" required style="width:100%; padding:9px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px;">
+        </div>
+        <div class="form-group" style="margin-bottom:6px;">
+          <label>Password</label>
+          <input type="password" id="loginPassword" required style="width:100%; padding:9px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px;">
+        </div>
+        <p id="loginError" style="color:#dc2626; font-size:12px; margin:8px 0; display:none;">Username ya password ghalat hai, ya account inactive hai.</p>
+        <div class="btn-row" style="margin-top:14px;">
+          <button type="submit" class="btn">Login</button>
+          <button type="button" class="btn btn-outline" onclick="closeLoginModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- IMAGE LIGHTBOX / ZOOM VIEWER -->
+  <div id="imgLightboxOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:10000; align-items:center; justify-content:center; flex-direction:column;">
+    <div style="position:absolute; top:16px; right:20px; display:flex; gap:8px;">
+      <button class="btn btn-sm" onclick="lightboxZoom(0.2)" title="Zoom In">➕</button>
+      <button class="btn btn-sm" onclick="lightboxZoom(-0.2)" title="Zoom Out">➖</button>
+      <button class="btn btn-outline btn-sm" onclick="lightboxResetZoom()" title="Reset">⟲ Reset</button>
+      <button class="btn btn-danger btn-sm" onclick="closeImageLightbox()">✕ Close</button>
+    </div>
+    <div style="width:90vw; height:80vh; overflow:auto; display:flex; align-items:center; justify-content:center;">
+      <img id="imgLightboxImg" src="" style="max-width:none; transform:scale(1); transition:transform .15s ease; cursor:grab;">
+    </div>
+    <p id="imgLightboxCaption" style="color:#f3f4f6; font-size:13px; margin-top:10px; max-width:80vw; text-align:center;"></p>
+  </div>
 
   <div class="sidebar">
     <div class="brand" id="brandBox">
@@ -89,49 +157,48 @@
     <div class="menu-item" onclick="showPage('settings', this)">⚙️ Settings</div>
   </div>
 
-  <div class="main">
-    <div class="topbar" style="display:flex; justify-content:space-between; align-items:center;">
+ <div class="main">
+    <div class="topbar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
       <!-- Left: College Title -->
-      <span id="topbarText">Government Postgraduate College Sariab Road Quetta</span>
-      
-      <!-- Right: Admission Button + Admin Status -->
-      <div style="display:flex; align-items:center; gap:18px;">
-        
-        <!-- Green Admission Portal Box -->
-        <div style="display:flex; flex-direction:column; align-items:flex-end;">
-          <!-- Bada Text Button -->
-          <a href="https://portal.chte.gob.pk/" target="_blank" style="background-color:#10b981; color:#ffffff; padding:7px 16px; border-radius:6px; font-weight:bold; font-size:15px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 4px rgba(0,0,0,0.12);">
-            <span>🎓</span> Admission Portal(portal.chte.gob.pk)
-          </a>
-          
-          <!-- Subtext with Hyperlink -->
-          <a href="https://portal.chte.gob.pk/" target="_blank" style="font-size:11px; color:#15803d; font-weight:700; margin-top:3px; text-decoration:underline;">
-            Click Here For Online Admission
-          </a>
-        </div>
+      <span id="topbarText" style="flex:1;">Government Postgraduate College Sariab Road Quetta</span>
 
-        <!-- Super Admin Status -->
-        <span style="font-size:13px; color:#6b7280; font-weight:500;">👤 Signed in as Super Admin</span>
+      <!-- Center: Admission Portal -->
+      <div style="display:flex; flex-direction:column; align-items:center; flex:1;">
+        <a href="https://portal.chte.gob.pk/" target="_blank" style="background-color:#10b981; color:#ffffff; padding:7px 16px; border-radius:6px; font-weight:bold; font-size:15px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 4px rgba(0,0,0,0.12);">
+          <span>🎓</span> Admission Portal(portal.chte.gob.pk)
+        </a>
+        <a href="https://portal.chte.gob.pk/" target="_blank" style="font-size:11px; color:#15803d; font-weight:700; margin-top:3px; text-decoration:underline;">
+          Click Here For Online Admission
+        </a>
+      </div>
+
+      <!-- Right: Auth status -->
+      <div id="authBox" style="display:flex; align-items:center; gap:8px; flex:1; justify-content:flex-end;">
+        <button class="btn btn-outline btn-sm" id="darkModeToggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">🌙</button>
+        <span id="authStatusText" style="font-size:12px; color:#6b7280; background:#f3f4f6; padding:4px 10px; border-radius:12px; white-space:nowrap;">👤 Guest (View Only)</span>
+        <button class="btn btn-sm" id="loginBtn" onclick="openLoginModal()">🔐 Login</button>
+        <button class="btn btn-outline btn-sm" id="logoutBtn" style="display:none;" onclick="logoutUser()">🚪 Logout</button>
       </div>
     </div>
+
+    <div id="cloudStatusPanel" style="display:none; padding:6px 20px; font-size:12px; background:#f3f4f6; color:#374151; border-bottom:1px solid #e5e7eb;">
+      <span id="cloudStatusText">🔄 Connecting to cloud...</span>
+    </div>
+
     <div class="content">
 
       <!-- DASHBOARD -->
       <div id="dashboard" class="page active">
         <h1>Dashboard</h1>
-        <!-- Developing Mode Notice Banner -->
-  <div style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; margin-top: 10px; margin-bottom: 15px;">
-    ⚠️ <strong>Project is in Developing Mode</strong> — We appreciate your patience if you encounter any issues or missing data. <span style="color: #0c5460; font-weight: bold;">| Project Developer: Israr Ahmed </span>
-  </div>
+        <p class="subtitle">Overview &amp; quick access</p>
 
-  <div class="panel" id="cloudStatusPanel" style="background:#fee2e2; display:none;">
-    <h3 id="cloudStatusText">🔴 Checking cloud connection...</h3>
-  </div>
+        <div style="background:#fef9c3; border:1px solid #fde68a; color:#854d0e; padding:12px 18px; border-radius:8px; font-size:13px; margin-bottom:20px;">
+          ⚠️ Project is in Developing Mode — We appreciate your patience if you encounter any issues or missing data. | <strong>Project Developer: Israr Ahmed</strong>
+        </div>
 
         <div class="panel">
           <h3>Featured Profiles</h3>
-          <p style="font-size:12px; color:#9ca3af; margin-bottom:10px;">Editable from Settings → Featured Profiles.</p>
-          <div id="profileCardsGrid" style="display:flex; flex-direction:row; flex-wrap:nowrap; gap:10px; overflow-x:auto;"></div>
+          <div id="profileCardsGrid" style="display:flex; flex-direction:row; flex-wrap:wrap; gap:10px;"></div>
         </div>
 
         <div class="stats">
@@ -177,7 +244,7 @@
             <h3>Import Students (CSV)</h3>
             <div class="btn-row">
               <button class="btn btn-outline btn-sm" onclick="document.getElementById('admissionImport').click()">⬆ Import CSV</button>
-              <input type="file" id="admissionImport" accept=".csv" onchange="importCSV(event, admissions, renderAll, 'admissions')">
+              <input type="file" id="admissionImport" accept=".csv" onchange="importCSV(event, admissions, renderAll, 'admissions', 'admission')">
             </div>
           </div>
           <p style="font-size:12px; color:#9ca3af;">CSV columns must be: name, father, cnic, phone, program, session</p>
@@ -267,7 +334,7 @@
               <div class="form-group"><label>Fee Type</label>
                 <select id="feeType" required>
                   <option value="">-- select --</option>
-                  <option>Admission Fee</option><option>Tuition Fee</option>
+                  <option>Admission Fee</option><option>Semester Fee</option><option>Tuition Fee</option>
                   <option>Examination Fee</option><option>Library Fee</option>
                   <option>Hostel Fee</option><option>Miscellaneous</option>
                 </select>
@@ -282,7 +349,16 @@
               <div class="form-group"><label>Amount (Rs.)</label><input type="number" id="feeAmount" min="0" required></div>
               <div class="form-group"><label>Due Date</label><input type="date" id="feeDueDate" required></div>
               <div class="form-group"><label>Status</label>
-                <select id="feeStatus" required><option>Unpaid</option><option>Paid</option></select>
+                <select id="feeStatus" required onchange="toggleFeeReason()">
+                  <option value="Paid">Paid</option>
+                  <option value="Unpaid">Unpaid</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-grid" id="feeReasonBox" style="display:none;">
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label>Remarks (reason fee is unpaid — e.g. "Fee Mauf")</label>
+                <textarea id="feeReason" placeholder="e.g. Fee waived (Fee Mauf), financial hardship, will pay next week, etc." style="width:100%; padding:9px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px; min-height:60px;"></textarea>
               </div>
             </div>
             <button type="submit" class="btn">➕ Add Fee Record</button>
@@ -351,7 +427,7 @@
             <div class="btn-row">
               <input type="text" class="search-box" id="studentSearch" placeholder="Search by name/program..." oninput="renderStudents()">
               <button class="btn btn-outline btn-sm" onclick="document.getElementById('studentsImport').click()">⬆ Import CSV</button>
-              <input type="file" id="studentsImport" accept=".csv" onchange="importCSV(event, admissions, renderAll, 'admissions')">
+              <input type="file" id="studentsImport" accept=".csv" onchange="importCSV(event, admissions, renderAll, 'admissions', 'students')">
               <button class="btn btn-outline btn-sm" onclick="exportCSV(admissions, 'students.csv')">⬇ Export CSV</button>
               <button class="btn btn-outline btn-sm" onclick="exportPDF(admissions, 'Students List')">🖨 Export PDF</button>
             </div>
@@ -385,7 +461,7 @@
             <h3>Faculty List</h3>
             <div class="btn-row">
               <button class="btn btn-outline btn-sm" onclick="document.getElementById('facultyImport').click()">⬆ Import CSV</button>
-              <input type="file" id="facultyImport" accept=".csv" onchange="importCSV(event, faculty, renderFaculty, 'faculty')">
+              <input type="file" id="facultyImport" accept=".csv" onchange="importCSV(event, faculty, renderFaculty, 'faculty', 'faculty')">
               <button class="btn btn-outline btn-sm" onclick="exportCSV(faculty, 'faculty.csv')">⬇ Export CSV</button>
               <button class="btn btn-outline btn-sm" onclick="exportPDF(faculty, 'Faculty List')">🖨 Export PDF</button>
             </div>
@@ -417,7 +493,7 @@
             <h3>Department List</h3>
             <div class="btn-row">
               <button class="btn btn-outline btn-sm" onclick="document.getElementById('deptImport').click()">⬆ Import CSV</button>
-              <input type="file" id="deptImport" accept=".csv" onchange="importCSV(event, departments, renderDepartments, 'departments')">
+              <input type="file" id="deptImport" accept=".csv" onchange="importCSV(event, departments, renderDepartments, 'departments', 'departments')">
               <button class="btn btn-outline btn-sm" onclick="exportCSV(departments, 'departments.csv')">⬇ Export CSV</button>
               <button class="btn btn-outline btn-sm" onclick="exportPDF(departments, 'Departments List')">🖨 Export PDF</button>
             </div>
@@ -457,7 +533,7 @@
             <h3>Course List</h3>
             <div class="btn-row">
               <button class="btn btn-outline btn-sm" onclick="document.getElementById('courseImport').click()">⬆ Import CSV</button>
-              <input type="file" id="courseImport" accept=".csv" onchange="importCSV(event, courses, renderCourses, 'courses')">
+              <input type="file" id="courseImport" accept=".csv" onchange="importCSV(event, courses, renderCourses, 'courses', 'courses')">
               <button class="btn btn-outline btn-sm" onclick="exportCSV(courses, 'courses.csv')">⬇ Export CSV</button>
               <button class="btn btn-outline btn-sm" onclick="exportPDF(courses, 'Courses List')">🖨 Export PDF</button>
             </div>
@@ -871,25 +947,42 @@
         <h1>Users</h1>
         <p class="subtitle">Manage system user accounts &amp; roles</p>
         <div class="panel">
-          <h3>Add User</h3>
+          <h3 id="userFormTitle">Add User</h3>
           <form id="userForm">
+            <input type="hidden" id="userEditIndex" value="">
             <div class="form-grid">
               <div class="form-group"><label>Username</label><input type="text" id="userUsername" required></div>
               <div class="form-group"><label>Full Name</label><input type="text" id="userFullName" required></div>
               <div class="form-group"><label>Email</label><input type="email" id="userEmail" required></div>
-              <div class="form-group"><label>Role</label>
-                <select id="userRole" required>
+              <div class="form-group"><label>Password</label><input type="text" id="userPassword" placeholder="Login password" required></div>
+              <div class="form-group"><label>Role / Branch</label>
+                <select id="userRole" required onchange="applyRolePermissionPreset()">
                   <option value="">-- select --</option>
                   <option>Super Admin</option><option>Admin</option><option>Principal</option>
                   <option>Controller of Examination</option><option>BS Coordinator</option>
                   <option>Examination Cell</option><option>Faculty Member</option>
+                  <option>Admission Branch</option><option>Fee Branch</option>
+                  <option>Attendance Branch</option><option>Result Branch</option>
                 </select>
               </div>
               <div class="form-group"><label>Status</label>
                 <select id="userStatus" required><option>Active</option><option>Inactive</option></select>
               </div>
             </div>
-            <button type="submit" class="btn">➕ Add User</button>
+
+            <div style="margin-top:15px;">
+              <label style="display:block; font-size:13px; color:#374151; margin-bottom:6px;">Page-wise Access (Super Admin ke ilawa har user ke liye set karein)</label>
+              <p style="font-size:12px; color:#9ca3af; margin-bottom:10px;">No Access = page bilkul nazar nahi ayega. View Only = sirf dekh sakta hai. Full Access = add/edit/delete bhi kar sakta hai.</p>
+              <table>
+                <thead><tr><th>Page</th><th>No Access</th><th>View Only</th><th>Full Access</th></tr></thead>
+                <tbody id="permissionEditorBody"></tbody>
+              </table>
+            </div>
+
+            <div class="btn-row">
+              <button type="submit" class="btn" id="userSubmitBtn">➕ Add User</button>
+              <button type="button" class="btn btn-outline" id="userCancelEditBtn" style="display:none;" onclick="cancelEditUser()">Cancel</button>
+            </div>
           </form>
         </div>
         <div class="panel">
@@ -899,7 +992,7 @@
               <button class="btn btn-outline btn-sm" onclick="exportPDF(users, 'Users List')">🖨 Export PDF</button>
           </div>
           <table>
-            <thead><tr><th>Username</th><th>Full Name</th><th>Email</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
+            <thead><tr><th>Username</th><th>Full Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody id="usersTable"></tbody>
           </table>
         </div>
@@ -930,6 +1023,47 @@
             <button class="btn" id="feeLockBtn" onclick="lockFeeStructure()">🔒 Save &amp; Lock</button>
             <button class="btn btn-outline" id="feeUnlockBtn" style="display:none;" onclick="unlockFeeStructure()">🔓 Unlock to Edit</button>
           </div>
+        </div>
+
+        <div class="panel">
+          <h3>📄 Transcript Settings</h3>
+          <p style="font-size:13px; color:#9ca3af; margin-bottom:10px;">Ye settings "Reports → Academic Transcript" par print hone waali transcript par apply hoti hain.</p>
+          <div class="form-grid">
+            <div class="form-group"><label>Affiliation Line (e.g. "Affiliated with University of Balochistan (UOB)")</label>
+              <input type="text" id="transcriptAffiliation" placeholder="Affiliated with University of Balochistan (UOB)">
+            </div>
+            <div class="form-group"><label>Transcript No. Prefix</label><input type="text" id="transcriptNoPrefix" placeholder="e.g. TR-2026-"></div>
+            <div class="form-group"><label>Next Transcript No.</label><input type="number" id="transcriptNextNo" min="1"></div>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:18px; margin:12px 0;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:#374151;">
+              <input type="checkbox" id="transcriptShowNo" style="width:16px; height:16px;"> Show Transcript No. on transcript
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:#374151;">
+              <input type="checkbox" id="transcriptShowQr" style="width:16px; height:16px;"> Show QR Code on transcript
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:#374151;">
+              <input type="checkbox" id="transcriptShowErrors" style="width:16px; height:16px;"> Show "Errors and omissions accepted" note
+            </label>
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label>"Errors and Omissions" Note Text</label>
+            <input type="text" id="transcriptErrorsText" placeholder="Errors and omissions are accepted.">
+          </div>
+          <button class="btn" onclick="saveTranscriptSettings()">💾 Save Transcript Settings</button>
+        </div>
+
+        <div class="panel">
+          <h3>🔐 Access Control (Guest Mode)</h3>
+          <p style="font-size:13px; color:#9ca3af; margin-bottom:10px;">
+            Guest woh visitor hai jo login nahi hai. By default guest sirf VIEW kar sakta hai (add/edit/delete hamesha login mangega).
+            Yahan se decide karein guest kin pages ko dekh sakta hai. Users &amp; Settings page hamesha sirf Super Admin ke liye reserved hain.
+          </p>
+          <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:#374151; margin-bottom:12px;">
+            <input type="checkbox" id="guestModeEnabled" style="width:16px; height:16px;"> Guest Mode Enabled (bina login browse karne dein)
+          </label>
+          <div id="guestPagesGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:8px; margin-bottom:15px;"></div>
+          <button class="btn" onclick="saveAccessControl()">💾 Save Access Control</button>
         </div>
 
         <div class="panel">
@@ -1007,20 +1141,278 @@
   let datesheet = [];
   let feeRecords = [];
   let feeSettings = { admissionFee: 0, semesterFee: 0, locked: false };
-  let users = [
-    { username: 'superadmin', fullname: 'Super Admin', email: 'superadmin@gbpgc.edu.pk', role: 'Super Admin', status: 'Active' },
-    { username: 'admin', fullname: 'College Admin', email: 'admin@gbpgc.edu.pk', role: 'Admin', status: 'Active' },
-    { username: 'principal', fullname: 'Prof. Principal Sahib', email: 'principal@gbpgc.edu.pk', role: 'Principal', status: 'Active' },
-    { username: 'controller', fullname: 'Controller of Examinations', email: 'controller@gbpgc.edu.pk', role: 'Controller of Examination', status: 'Active' },
-    { username: 'coordinator', fullname: 'BS Coordinator', email: 'coordinator@gbpgc.edu.pk', role: 'BS Coordinator', status: 'Active' },
-    { username: 'examcell', fullname: 'Examination Cell Officer', email: 'examcell@gbpgc.edu.pk', role: 'Examination Cell', status: 'Active' },
-    { username: 'faculty', fullname: 'Dr. Faculty Member', email: 'faculty@gbpgc.edu.pk', role: 'Faculty Member', status: 'Active' }
+
+  // ===== ACCESS CONTROL / AUTHENTICATION =====
+  // Modules a Super Admin can grant/restrict per user (and per Guest, view-only).
+  // 'users' and 'settings' are intentionally NOT in this list — they are always Super-Admin-only.
+  const MODULES = [
+    { id: 'admission',   label: 'Admission' },
+    { id: 'fee',         label: 'Fee' },
+    { id: 'students',    label: 'Students' },
+    { id: 'faculty',     label: 'Faculty' },
+    { id: 'departments', label: 'Departments' },
+    { id: 'courses',     label: 'Courses' },
+    { id: 'attendance',  label: 'Attendance' },
+    { id: 'exams',       label: 'Exams & Marks' },
+    { id: 'addresult',   label: 'Add Result' },
+    { id: 'timetable',   label: 'Timetable' },
+    { id: 'datesheet',   label: 'Datesheet' },
+    { id: 'merit',       label: 'Merit & Results' },
+    { id: 'reports',     label: 'Reports' }
   ];
+  function fullPerms() { const o = {}; MODULES.forEach(m => o[m.id] = 'full'); return o; }
+  function nonePerms() { const o = {}; MODULES.forEach(m => o[m.id] = 'none'); return o; }
+  function presetPerms(ids) { const o = nonePerms(); ids.forEach(id => o[id] = 'full'); return o; }
+
+  // Role -> default permission preset (Super Admin can always edit these per-user before saving)
+  const ROLE_PRESETS = {
+    'Super Admin': fullPerms(),
+    'Admin': fullPerms(),
+    'Principal': fullPerms(),
+    'Controller of Examination': presetPerms(['exams', 'addresult', 'merit', 'reports', 'datesheet']),
+    'BS Coordinator': presetPerms(['admission', 'students', 'courses', 'timetable', 'reports']),
+    'Examination Cell': presetPerms(['exams', 'addresult', 'merit', 'datesheet']),
+    'Faculty Member': presetPerms(['attendance', 'exams', 'timetable', 'datesheet']),
+    'Admission Branch': presetPerms(['admission', 'students', 'reports']),
+    'Fee Branch': presetPerms(['fee', 'reports']),
+    'Attendance Branch': presetPerms(['attendance', 'timetable']),
+    'Result Branch': presetPerms(['exams', 'addresult', 'merit', 'datesheet'])
+  };
+
+  let currentUser = null; // { username, fullname, role, permissions } — null = Guest
+  const SESSION_KEY = 'cms_session_username';
+  // Guest = anyone not logged in. Guest is ALWAYS view-only (never add/edit/delete), regardless of settings below.
+  let guestSettings = { enabled: true, pages: MODULES.map(m => m.id) };
+
+  // ===== TRANSCRIPT SETTINGS =====
+  let transcriptSettings = {
+    affiliation: 'Affiliated with University of Balochistan (UOB)',
+    noPrefix: 'TR-',
+    nextNo: 1,
+    showNo: true,
+    showQr: true,
+    showErrors: true,
+    errorsText: 'Errors and omissions are accepted.'
+  };
+
+  let users = [
+    { id: newId(), username: 'superadmin', fullname: 'Super Admin', email: 'superadmin@gbpgc.edu.pk', role: 'Super Admin', status: 'Active', password: 'admin123', permissions: fullPerms() },
+    { id: newId(), username: 'admin', fullname: 'College Admin', email: 'admin@gbpgc.edu.pk', role: 'Admin', status: 'Active', password: 'admin123', permissions: fullPerms() },
+    { id: newId(), username: 'principal', fullname: 'Prof. Principal Sahib', email: 'principal@gbpgc.edu.pk', role: 'Principal', status: 'Active', password: 'principal123', permissions: fullPerms() },
+    { id: newId(), username: 'controller', fullname: 'Controller of Examinations', email: 'controller@gbpgc.edu.pk', role: 'Controller of Examination', status: 'Active', password: 'controller123', permissions: ROLE_PRESETS['Controller of Examination'] },
+    { id: newId(), username: 'coordinator', fullname: 'BS Coordinator', email: 'coordinator@gbpgc.edu.pk', role: 'BS Coordinator', status: 'Active', password: 'coordinator123', permissions: ROLE_PRESETS['BS Coordinator'] },
+    { id: newId(), username: 'examcell', fullname: 'Examination Cell Officer', email: 'examcell@gbpgc.edu.pk', role: 'Examination Cell', status: 'Active', password: 'examcell123', permissions: ROLE_PRESETS['Examination Cell'] },
+    { id: newId(), username: 'faculty', fullname: 'Dr. Faculty Member', email: 'faculty@gbpgc.edu.pk', role: 'Faculty Member', status: 'Active', password: 'faculty123', permissions: ROLE_PRESETS['Faculty Member'] }
+  ];
+
+  // ===== ACCESS CONTROL HELPERS =====
+  function isSuperAdmin() { return !!(currentUser && currentUser.role === 'Super Admin'); }
+
+  // Can the current viewer (guest or logged-in user) SEE this page?
+  function canView(pageId) {
+    if (pageId === 'dashboard') return true;
+    if (pageId === 'users' || pageId === 'settings') return isSuperAdmin();
+    if (currentUser) {
+      if (isSuperAdmin()) return true;
+      const lvl = (currentUser.permissions && currentUser.permissions[pageId]) || 'none';
+      return lvl === 'view' || lvl === 'full';
+    }
+    return !!(guestSettings.enabled && guestSettings.pages.includes(pageId));
+  }
+
+  // Can the current viewer ADD / EDIT / DELETE on this page? Guests can NEVER write.
+  function canWrite(pageId) {
+    if (pageId === 'users' || pageId === 'settings') return isSuperAdmin();
+    if (!currentUser) return false;
+    if (isSuperAdmin()) return true;
+    const lvl = (currentUser.permissions && currentUser.permissions[pageId]) || 'none';
+    return lvl === 'full';
+  }
+
+  // Call this at the top of any add/edit/delete/save action. Returns false (and alerts/opens login) if not allowed.
+  function guardWrite(pageId, actionLabel) {
+    if (canWrite(pageId)) return true;
+    if (!currentUser) {
+      alert('"' + (actionLabel || 'Ye action') + '" karne ke liye Login zaroori hai.');
+      openLoginModal();
+    } else {
+      alert('Aapke paas "' + (actionLabel || 'is action') + '" ki ijazat nahi hai. Super Admin se rabta karein.');
+    }
+    return false;
+  }
+
+  function menuItemFor(pageId) {
+    return document.querySelector('.menu-item[onclick*=' + pageId + ']');
+  }
+
+  // Show/hide sidebar menu items based on current permissions, and update the login/logout box.
+  function applyAccessControl() {
+    const gated = ['admission','fee','students','faculty','departments','courses','attendance','exams','addresult','timetable','datesheet','merit','reports','users','settings'];
+    gated.forEach(id => {
+      const mi = menuItemFor(id);
+      if (mi) mi.style.display = canView(id) ? 'flex' : 'none';
+    });
+    const activePage = document.querySelector('.page.active');
+    if (activePage && activePage.id !== 'dashboard' && !canView(activePage.id)) {
+      const dashMi = menuItemFor('dashboard');
+      if (dashMi) showPage('dashboard', dashMi);
+    }
+    renderAuthBox();
+  }
+
+  function renderAuthBox() {
+    if (currentUser) {
+      authStatusText.innerText = '👤 ' + currentUser.fullname + ' (' + currentUser.role + ')';
+      loginBtn.style.display = 'none';
+      logoutBtn.style.display = 'inline-block';
+    } else {
+      authStatusText.innerText = '👤 Guest (View Only)';
+      loginBtn.style.display = 'inline-block';
+      logoutBtn.style.display = 'none';
+    }
+  }
+
+  // ===== LOGIN / LOGOUT =====
+  function openLoginModal() {
+    loginError.style.display = 'none';
+    document.getElementById('loginForm').reset();
+    loginModalOverlay.style.display = 'flex';
+    loginUsername.focus();
+  }
+  function closeLoginModal() {
+    loginModalOverlay.style.display = 'none';
+  }
+  document.getElementById('loginForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const uname = loginUsername.value.trim();
+    const pass = loginPassword.value;
+    const match = users.find(u => u.username === uname && u.password === pass && u.status === 'Active');
+    if (!match) {
+      loginError.style.display = 'block';
+      return;
+    }
+    currentUser = match;
+    localStorage.setItem(SESSION_KEY, match.username);
+    closeLoginModal();
+    applyAccessControl();
+    renderAll();
+  });
+  function logoutUser() {
+    currentUser = null;
+    localStorage.removeItem(SESSION_KEY);
+    applyAccessControl();
+    renderAll();
+  }
+  function restoreSession() {
+    const savedUsername = localStorage.getItem(SESSION_KEY);
+    if (!savedUsername) return;
+    const match = users.find(u => u.username === savedUsername && u.status === 'Active');
+    if (match) currentUser = match;
+    else localStorage.removeItem(SESSION_KEY);
+  }
+
+  // ===== PERMISSION EDITOR (Users → Add/Edit User form) =====
+  function renderPermissionEditor(selectedRole, existingPerms) {
+    const perms = existingPerms || (selectedRole && ROLE_PRESETS[selectedRole]) || nonePerms();
+    permissionEditorBody.innerHTML = MODULES.map(m => `
+      <tr>
+        <td>${m.label}</td>
+        <td style="text-align:center;"><input type="radio" name="perm_${m.id}" value="none" ${perms[m.id]==='none'||!perms[m.id] ? 'checked' : ''}></td>
+        <td style="text-align:center;"><input type="radio" name="perm_${m.id}" value="view" ${perms[m.id]==='view' ? 'checked' : ''}></td>
+        <td style="text-align:center;"><input type="radio" name="perm_${m.id}" value="full" ${perms[m.id]==='full' ? 'checked' : ''}></td>
+      </tr>
+    `).join('');
+  }
+  function applyRolePermissionPreset() {
+    renderPermissionEditor(userRole.value, null);
+  }
+  function readPermissionEditor() {
+    const o = {};
+    MODULES.forEach(m => {
+      const checked = document.querySelector(`input[name="perm_${m.id}"]:checked`);
+      o[m.id] = checked ? checked.value : 'none';
+    });
+    return o;
+  }
+  function cancelEditUser() {
+    userEditIndex.value = '';
+    document.getElementById('userForm').reset();
+    userFormTitle.innerText = 'Add User';
+    userSubmitBtn.innerText = '➕ Add User';
+    userCancelEditBtn.style.display = 'none';
+    renderPermissionEditor();
+  }
+  function editUser(i) {
+    if (!guardWrite('users', 'User edit')) return;
+    const u = users[i];
+    if (!u) return;
+    userEditIndex.value = i;
+    userUsername.value = u.username;
+    userFullName.value = u.fullname;
+    userEmail.value = u.email;
+    userPassword.value = u.password || '';
+    userRole.value = u.role;
+    userStatus.value = u.status;
+    renderPermissionEditor(u.role, u.permissions);
+    userFormTitle.innerText = 'Edit User';
+    userSubmitBtn.innerText = '💾 Update User';
+    userCancelEditBtn.style.display = 'inline-block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ===== TRANSCRIPT SETTINGS (Settings page) =====
+  function renderTranscriptSettings() {
+    transcriptAffiliation.value = transcriptSettings.affiliation;
+    transcriptNoPrefix.value = transcriptSettings.noPrefix;
+    transcriptNextNo.value = transcriptSettings.nextNo;
+    transcriptShowNo.checked = transcriptSettings.showNo;
+    transcriptShowQr.checked = transcriptSettings.showQr;
+    transcriptShowErrors.checked = transcriptSettings.showErrors;
+    transcriptErrorsText.value = transcriptSettings.errorsText;
+  }
+  function saveTranscriptSettings() {
+    if (!guardWrite('settings', 'Transcript settings save')) return;
+    transcriptSettings = {
+      affiliation: transcriptAffiliation.value.trim(),
+      noPrefix: transcriptNoPrefix.value.trim(),
+      nextNo: parseInt(transcriptNextNo.value) || 1,
+      showNo: transcriptShowNo.checked,
+      showQr: transcriptShowQr.checked,
+      showErrors: transcriptShowErrors.checked,
+      errorsText: transcriptErrorsText.value.trim()
+    };
+    sbUpdate('app_settings', 'main', { transcript_settings: JSON.stringify(transcriptSettings) });
+    alert('Transcript Settings saved!');
+  }
+
+  // ===== ACCESS CONTROL (Settings → Guest Mode) =====
+  function renderAccessControlSettings() {
+    guestModeEnabled.checked = guestSettings.enabled;
+    guestPagesGrid.innerHTML = MODULES.map(m => `
+      <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:#374151;">
+        <input type="checkbox" class="guestPageChk" value="${m.id}" ${guestSettings.pages.includes(m.id) ? 'checked' : ''}> ${m.label}
+      </label>
+    `).join('');
+  }
+  function saveAccessControl() {
+    if (!guardWrite('settings', 'Access Control save')) return;
+    guestSettings.enabled = guestModeEnabled.checked;
+    guestSettings.pages = Array.from(document.querySelectorAll('.guestPageChk:checked')).map(c => c.value);
+    sbUpdate('app_settings', 'main', { guest_enabled: guestSettings.enabled, guest_pages: JSON.stringify(guestSettings.pages) });
+    applyAccessControl();
+    alert('Access Control saved!');
+  }
 
   // ===== NAVIGATION =====
   function showPage(id, el) {
+    if (!canView(id)) {
+      if (!currentUser) { alert('Ye page dekhne ke liye Login zaroori hai.'); openLoginModal(); }
+      else alert('Aapke paas is page ki ijazat nahi hai.');
+      return;
+    }
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
+    const pageEl = document.getElementById(id);
+    if (pageEl) pageEl.classList.add('active');
     document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
     el.classList.add('active');
     if (id === 'attendance') populateCourseDropdown();
@@ -1029,8 +1421,9 @@
     if (id === 'timetable') populateTimetableDropdowns();
     if (id === 'datesheet') populateDatesheetDropdowns();
     if (id === 'fee') populateFeeDropdown();
-    if (id === 'settings') renderProfileSettings();
+    if (id === 'settings') { renderProfileSettings(); renderAccessControlSettings(); renderTranscriptSettings(); }
     if (id === 'addresult') populateAddResultCourses();
+    if (id === 'users') renderPermissionEditor(userRole.value, null);
   }
 
   function populateFeeDropdown() {
@@ -1107,6 +1500,7 @@
 
   document.getElementById('admissionForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+    if (!guardWrite('admission', 'Admission submit')) return;
     const rollNo = generateRollNo(program.value, session.value);
     const record = {
       id: newId(), rollNo: rollNo,
@@ -1157,6 +1551,7 @@
   });
 
   function deleteAdmission(i) {
+    if (!guardWrite('admission', 'Admission delete')) return;
     const record = admissions[i];
     admissions.splice(i,1);
     if (record) sbDelete('admissions', record.id);
@@ -1308,6 +1703,7 @@
   // ===== FACULTY =====
   document.getElementById('facultyForm').addEventListener('submit', function(e) {
     e.preventDefault();
+    if (!guardWrite('faculty', 'Faculty add')) return;
     const record = { id: newId(), name: facName.value, designation: facDesignation.value, department: facDept.value, phone: facPhone.value, email: facEmail.value };
     faculty.push(record);
     sbInsert('faculty', record);
@@ -1315,6 +1711,7 @@
     renderFaculty();
   });
   function deleteFaculty(i) {
+    if (!guardWrite('faculty', 'Faculty delete')) return;
     const record = faculty[i];
     faculty.splice(i,1);
     if (record) sbDelete('faculty', record.id);
@@ -1330,6 +1727,7 @@
   // ===== DEPARTMENTS =====
   document.getElementById('deptForm').addEventListener('submit', function(e) {
     e.preventDefault();
+    if (!guardWrite('departments', 'Department add')) return;
     const record = { id: newId(), name: deptName.value, code: deptCode.value, hod: deptHOD.value };
     departments.push(record);
     sbInsert('departments', record);
@@ -1337,6 +1735,7 @@
     renderDepartments();
   });
   function deleteDept(i) {
+    if (!guardWrite('departments', 'Department delete')) return;
     const record = departments[i];
     departments.splice(i,1);
     if (record) sbDelete('departments', record.id);
@@ -1352,6 +1751,7 @@
   // ===== COURSES =====
   document.getElementById('courseForm').addEventListener('submit', function(e) {
     e.preventDefault();
+    if (!guardWrite('courses', 'Course add')) return;
     const record = { id: newId(), name: courseName.value, code: courseCode.value, credit: parseFloat(courseCredit.value), department: courseDept.value, semester: parseInt(courseSemester.value) };
     courses.push(record);
     sbInsert('courses', record);
@@ -1359,6 +1759,7 @@
     renderCourses();
   });
   function deleteCourse(i) {
+    if (!guardWrite('courses', 'Course delete')) return;
     const record = courses[i];
     courses.splice(i,1);
     if (record) sbDelete('courses', record.id);
@@ -1403,6 +1804,7 @@
   }
 
   function setAttendance(key, i, status) {
+    if (!guardWrite('attendance', 'Mark attendance')) return;
     attendanceRecords[key][i].status = status;
     renderAttendanceSheet(key);
   }
@@ -1491,9 +1893,10 @@
     return h.trim(); // fall back to the header as-written for tables without an alias map (faculty/departments/courses)
   }
 
-  function importCSV(event, targetArray, renderFn, tableName) {
+  function importCSV(event, targetArray, renderFn, tableName, pageId) {
     const file = event.target.files[0];
     if (!file) return;
+    if (pageId && !guardWrite(pageId, 'CSV import')) { event.target.value = ''; return; }
     const reader = new FileReader();
     reader.onload = async function(e) {
       const lines = e.target.result.split(/\r?\n/).filter(l => l.trim() !== '');
@@ -1577,6 +1980,7 @@
 
   document.getElementById('marksForm').addEventListener('submit', function(e) {
     e.preventDefault();
+    if (!guardWrite('exams', 'Marks entry')) return;
 
     const studentOpt = markStudent.selectedOptions[0];
     const program = studentOpt ? studentOpt.dataset.program : '';
@@ -1620,6 +2024,7 @@
   });
 
   function deleteMark(i) {
+    if (!guardWrite('exams', 'Marks delete')) return;
     const record = examMarks[i];
     examMarks.splice(i,1);
     if (record) sbDelete('exam_marks', record.id);
@@ -1740,6 +2145,7 @@
 
   // Save all entered marks in the Add Result sheet at once
   function saveAddResult() {
+    if (!guardWrite('addresult', 'Result entry')) return;
     const session = arSession.value, program = arProgram.value, sem = parseInt(arSemester.value), courseName = arCourse.value;
     const entryType = arEntryType.value;
     if (!session || !program || !sem || !courseName) { alert('Please select session, program, semester and course first.'); return; }
@@ -1941,6 +2347,20 @@
     const finalCGPA = cumulativeCH > 0 ? (cumulativePoints / cumulativeCH) : 0;
     const collegeName = collegeNameSidebar.innerText;
 
+    // Transcript No. (auto-incrementing, persisted so the next one issued gets the next number)
+    let transcriptNo = '';
+    if (transcriptSettings.showNo) {
+      transcriptNo = transcriptSettings.noPrefix + transcriptSettings.nextNo;
+      transcriptSettings.nextNo += 1;
+      sbUpdate('app_settings', 'main', { transcript_settings: JSON.stringify(transcriptSettings) });
+    }
+
+    // QR Code — encodes student name, roll no, and transcript no for quick verification
+    const qrData = encodeURIComponent(`${collegeName} | ${studentName} | Roll:${admission ? admission.rollNo || '-' : '-'} | ${transcriptNo || ''} | CGPA:${finalCGPA.toFixed(2)}`);
+    const qrImgSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=' + qrData;
+
+    const logoSrc = (collegeLogoImg && collegeLogoImg.src && collegeLogoImg.style.display !== 'none') ? collegeLogoImg.src : '';
+
     const win = window.open('', '_blank');
     if (!win) { alert('Popup blocked! Please allow popups for this page and try again.'); return; }
     win.document.write(`
@@ -1951,8 +2371,12 @@
           @page { size: A4; margin: 12mm; }
           * { box-sizing: border-box; }
           body { font-family: Arial, sans-serif; padding: 15px; color:#111; font-size:11px; }
+          .letterhead { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:2px; }
+          .letterhead img { max-width:60px; max-height:60px; }
           h1 { text-align:center; font-size:17px; margin-bottom:0; }
-          .tagline { text-align:center; font-size:11px; color:#555; margin-bottom:8px;}
+          .tagline { text-align:center; font-size:11px; color:#555; }
+          .affiliation { text-align:center; font-size:10.5px; color:#555; font-style:italic; margin-bottom:4px; }
+          .transcript-no { text-align:right; font-size:10px; color:#555; margin-bottom:2px; }
           .title { text-align:center; font-weight:bold; margin-bottom:10px; text-decoration:underline; font-size:13px; }
           .info-grid { display:grid; grid-template-columns: 1fr 1fr; gap:3px 30px; font-size:11px; margin-bottom:10px; }
           .sem-grid { display:grid; grid-template-columns: 1fr 1fr; gap:0 20px; }
@@ -1963,12 +2387,22 @@
           th { background:#f3f4f6; }
           .sem-summary { font-size:10px; margin-top:2px; }
           .cgpa-box { margin-top:10px; font-size:13px; font-weight:bold; text-align:center; }
-          .sign { display:flex; justify-content:space-between; margin-top:30px; font-size:11px; }
+          .footer-row { display:flex; justify-content:space-between; align-items:flex-end; margin-top:30px; }
+          .sign { display:flex; gap:40px; font-size:11px; }
+          .qr-box { text-align:center; font-size:9px; color:#555; }
+          .errors-note { text-align:center; font-size:9.5px; color:#777; margin-top:14px; border-top:1px solid #ddd; padding-top:6px; }
         </style>
       </head>
       <body>
-        <h1>${collegeName}</h1>
-        <div class="tagline">${topbarText.innerText}</div>
+        ${transcriptNo ? `<div class="transcript-no">Transcript No: <b>${transcriptNo}</b></div>` : ''}
+        <div class="letterhead">
+          ${logoSrc ? `<img src="${logoSrc}">` : ''}
+          <div>
+            <h1>${collegeName}</h1>
+            <div class="tagline">${topbarText.innerText}</div>
+          </div>
+        </div>
+        ${transcriptSettings.affiliation ? `<div class="affiliation">${transcriptSettings.affiliation}</div>` : ''}
         <div class="title">ACADEMIC TRANSCRIPT</div>
         <div class="info-grid">
           <div><b>Name:</b> ${studentName}</div>
@@ -1980,10 +2414,14 @@
         </div>
         ${semesterBlocksHTML}
         <div class="cgpa-box">Cumulative CGPA: ${finalCGPA.toFixed(2)} (${cumulativeCH} credit hours)</div>
-        <div class="sign">
-          <div>_______________________<br>BS Coordinator</div>
-          <div>_______________________<br>Controller of Examinations</div>
+        <div class="footer-row">
+          <div class="sign">
+            <div>_______________________<br>BS Coordinator</div>
+            <div>_______________________<br>Controller of Examinations</div>
+          </div>
+          ${transcriptSettings.showQr ? `<div class="qr-box"><img src="${qrImgSrc}"><br>Scan to verify</div>` : ''}
         </div>
+        ${transcriptSettings.showErrors && transcriptSettings.errorsText ? `<div class="errors-note">${transcriptSettings.errorsText}</div>` : ''}
       </body>
       </html>
     `);
@@ -2022,6 +2460,7 @@
   // ===== TIMETABLE =====
   document.getElementById('timetableForm').addEventListener('submit', function(e) {
     e.preventDefault();
+    if (!guardWrite('timetable', 'Timetable add')) return;
     const record = { id: newId(), day: ttDay.value, time: ttTime.value, course: ttCourse.value, faculty: ttFaculty.value, program: ttProgram.value, semester: parseInt(ttSemester.value), room: ttRoom.value };
     timetable.push(record);
     sbInsert('timetable', record);
@@ -2029,6 +2468,7 @@
     renderTimetable();
   });
   function deleteTimetable(i) {
+    if (!guardWrite('timetable', 'Timetable delete')) return;
     const record = timetable[i];
     timetable.splice(i,1);
     if (record) sbDelete('timetable', record.id);
@@ -2044,6 +2484,7 @@
   // ===== DATESHEET =====
   document.getElementById('datesheetForm').addEventListener('submit', function(e) {
     e.preventDefault();
+    if (!guardWrite('datesheet', 'Datesheet add')) return;
     const record = { id: newId(), date: dsDate.value, time: dsTime.value, course: dsCourse.value, program: dsProgram.value, semester: parseInt(dsSemester.value), room: dsRoom.value };
     datesheet.push(record);
     sbInsert('datesheet', record);
@@ -2051,6 +2492,7 @@
     renderDatesheet();
   });
   function deleteDatesheet(i) {
+    if (!guardWrite('datesheet', 'Datesheet delete')) return;
     const record = datesheet[i];
     datesheet.splice(i,1);
     if (record) sbDelete('datesheet', record.id);
@@ -2366,20 +2808,28 @@
   }
 
   // ===== FEE =====
+  // Show the Remarks/Reason box only when the fee is marked Unpaid
+  function toggleFeeReason() {
+    feeReasonBox.style.display = feeStatus.value === 'Unpaid' ? 'grid' : 'none';
+  }
   document.getElementById('feeForm').addEventListener('submit', function(e) {
     e.preventDefault();
+    if (!guardWrite('fee', 'Fee record add')) return;
     const record = {
       id: newId(), student: feeStudent.value, type: feeType.value, semester: feeSemester.value,
-      amount: parseFloat(feeAmount.value), dueDate: feeDueDate.value, status: feeStatus.value
+      amount: parseFloat(feeAmount.value), dueDate: feeDueDate.value, status: feeStatus.value,
+      reason: feeStatus.value === 'Unpaid' ? feeReason.value.trim() : ''
     };
     feeRecords.push(record);
     sbInsert('fee_records', { id: record.id, student: record.student, type: record.type, semester: record.semester.toString(),
-      amount: record.amount, due_date: record.dueDate, status: record.status });
+      amount: record.amount, due_date: record.dueDate, status: record.status, reason: record.reason });
     this.reset();
+    feeReasonBox.style.display = 'none';
     renderFee();
   });
 
   function deleteFee(i) {
+    if (!guardWrite('fee', 'Fee record delete')) return;
     const record = feeRecords[i];
     feeRecords.splice(i,1);
     if (record) sbDelete('fee_records', record.id);
@@ -2387,6 +2837,7 @@
   }
 
   function toggleFeeStatus(i) {
+    if (!guardWrite('fee', 'Fee status change')) return;
     if (feeRecords[i].status === 'Upcoming') { alert('This semester has not been reached yet, so this fee is not due.'); return; }
     feeRecords[i].status = feeRecords[i].status === 'Paid' ? 'Unpaid' : 'Paid';
     sbUpdate('fee_records', feeRecords[i].id, { status: feeRecords[i].status });
@@ -2421,6 +2872,7 @@
 
   // ----- Auto-generate fee records for all students based on locked fee structure -----
   function generateFeeForAllStudents() {
+    if (!guardWrite('fee', 'Auto-generate fee')) return;
     if (!feeSettings.locked) { alert('Please set and lock the Fee Structure in Settings first.'); return; }
     if (!admissions.length) { alert('No students found. Add admissions first.'); return; }
 
@@ -2475,8 +2927,8 @@
         <td>${f.student}</td><td>${f.type}</td><td>${f.semester}</td>
         <td>Rs. ${f.amount.toLocaleString()}</td><td>${f.dueDate || '-'}</td>
         <td>
-          <span onclick="toggleFeeStatus(${i})" style="cursor:${f.status==='Upcoming' ? 'default' : 'pointer'}; color:${color}; font-weight:600;">
-            ${label}
+          <span onclick="toggleFeeStatus(${i})" title="${f.status === 'Unpaid' && f.reason ? f.reason.replace(/"/g,'&quot;') : ''}" style="cursor:${f.status==='Upcoming' ? 'default' : 'pointer'}; color:${color}; font-weight:600;">
+            ${label}${f.status === 'Unpaid' && f.reason ? ' 📝' : ''}
           </span>
         </td>
         <td><button class="btn btn-danger btn-sm" onclick="deleteFee(${i})">Delete</button></td>
@@ -2524,17 +2976,38 @@
     }).join('') || `<tr class="empty-row"><td colspan="5">No fee records found for this selection.</td></tr>`;
   }
 
-  // ===== USERS =====
+  // ===== USERS ===== (Users page is always Super-Admin-only, see canView/canWrite)
   document.getElementById('userForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    const record = { id: newId(), username: userUsername.value, fullname: userFullName.value, email: userEmail.value, role: userRole.value, status: userStatus.value };
-    users.push(record);
-    sbInsert('users', record);
-    this.reset();
+    if (!guardWrite('users', 'User create/edit')) return;
+    const editIdx = userEditIndex.value !== '' ? parseInt(userEditIndex.value) : null;
+    const permissions = readPermissionEditor();
+    const record = {
+      id: editIdx !== null ? users[editIdx].id : newId(),
+      username: userUsername.value, fullname: userFullName.value, email: userEmail.value,
+      password: userPassword.value, role: userRole.value, status: userStatus.value,
+      permissions: permissions
+    };
+    if (editIdx !== null) {
+      users[editIdx] = record;
+      sbUpdate('users', record.id, record);
+      // keep the session in sync if the admin edited the account they're currently logged in as
+      if (currentUser && currentUser.username === record.username) currentUser = record;
+    } else {
+      users.push(record);
+      sbInsert('users', record);
+    }
+    cancelEditUser();
     renderUsers();
+    applyAccessControl();
   });
   function deleteUser(i) {
+    if (!guardWrite('users', 'User delete')) return;
     const record = users[i];
+    if (record && currentUser && record.username === currentUser.username) {
+      alert('Aap apna hi active account delete nahi kar saktay.');
+      return;
+    }
     users.splice(i,1);
     if (record) sbDelete('users', record.id);
     renderUsers();
@@ -2543,12 +3016,16 @@
     usersTable.innerHTML = users.map((u,i) => `
       <tr><td>${u.username}</td><td>${u.fullname}</td><td>${u.email}</td><td>${u.role}</td>
       <td style="color:${u.status==='Active' ? '#059669' : '#dc2626'};">${u.status}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="deleteUser(${i})">Delete</button></td></tr>
+      <td><div class="btn-row">
+        <button class="btn btn-outline btn-sm" onclick="editUser(${i})">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteUser(${i})">Delete</button>
+      </div></td></tr>
     `).join('');
   }
 
   // ===== SETTINGS =====
   function saveSettings() {
+    if (!guardWrite('settings', 'Settings save')) return;
     const name = settingCollegeName.value.trim();
     const tagline = settingTagline.value.trim();
     const file = settingLogo.files[0];
@@ -2574,6 +3051,7 @@
 
   // ===== DUMMY / TEST DATA GENERATOR =====
   async function generateDummyData() {
+    if (!guardWrite('settings', 'Generate dummy data')) return;
     if (admissions.length || faculty.length || courses.length) {
       if (!confirm('This will ADD demo data on top of existing data. Continue?')) return;
     }
@@ -2684,6 +3162,7 @@
   }
 
   async function clearAllData() {
+    if (!guardWrite('settings', 'Clear all data')) return;
     if (!confirm('This will permanently clear ALL data (students, faculty, courses, marks, etc) — including the cloud database. Continue?')) return;
     admissions = []; faculty = []; departments = []; courses = [];
     attendanceRecords = {}; examMarks = []; timetable = []; datesheet = []; feeRecords = [];
@@ -2741,14 +3220,60 @@
 
   // ===== FEATURED PROFILES (Dashboard picture cards, editable from Settings) =====
   let profileCards = [
-    { image: '', caption: '', enabled: true, zoom: 100, posX: 50, posY: 50 },
-    { image: '', caption: '', enabled: true, zoom: 100, posX: 50, posY: 50 },
-    { image: '', caption: '', enabled: true, zoom: 100, posX: 50, posY: 50 },
-    { image: '', caption: '', enabled: true, zoom: 100, posX: 50, posY: 50 }
+    { image: '', caption: '', enabled: true, zoom: 100, posX: 50, posY: 50, orientation: 'landscape' },
+    { image: '', caption: '', enabled: true, zoom: 100, posX: 50, posY: 50, orientation: 'landscape' },
+    { image: '', caption: '', enabled: true, zoom: 100, posX: 50, posY: 50, orientation: 'landscape' },
+    { image: '', caption: '', enabled: true, zoom: 100, posX: 50, posY: 50, orientation: 'landscape' }
   ];
 
   // Builds the CSS for a zoomable/positionable image box (used on both Dashboard and Settings preview)
-  function profileImageBoxStyle(p, height) {
+  // ===== DARK MODE =====
+  function toggleDarkMode() {
+    const isDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('cms_dark_mode', isDark ? '1' : '0');
+    darkModeToggle.innerText = isDark ? '☀️' : '🌙';
+  }
+  function initDarkMode() {
+    if (localStorage.getItem('cms_dark_mode') === '1') {
+      document.body.classList.add('dark-mode');
+      darkModeToggle.innerText = '☀️';
+    }
+  }
+  initDarkMode();
+
+  // ===== IMAGE LIGHTBOX / ZOOM VIEWER =====
+  let lightboxZoomLevel = 1;
+  function openImageLightbox(src, caption) {
+    imgLightboxImg.src = src;
+    imgLightboxCaption.innerText = caption || '';
+    lightboxZoomLevel = 1;
+    imgLightboxImg.style.transform = 'scale(1)';
+    imgLightboxOverlay.style.display = 'flex';
+  }
+  function closeImageLightbox() {
+    imgLightboxOverlay.style.display = 'none';
+    imgLightboxImg.src = '';
+  }
+  function lightboxZoom(delta) {
+    lightboxZoomLevel = Math.min(5, Math.max(0.3, lightboxZoomLevel + delta));
+    imgLightboxImg.style.transform = 'scale(' + lightboxZoomLevel + ')';
+  }
+  function lightboxResetZoom() {
+    lightboxZoomLevel = 1;
+    imgLightboxImg.style.transform = 'scale(1)';
+  }
+  // Scroll wheel to zoom, click backdrop to close
+  document.getElementById('imgLightboxOverlay').addEventListener('wheel', function(e) {
+    e.preventDefault();
+    lightboxZoom(e.deltaY < 0 ? 0.15 : -0.15);
+  }, { passive: false });
+  document.getElementById('imgLightboxOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeImageLightbox();
+  });
+
+  function profileImageBoxStyle(p, baseHeight) {
+    const orientation = p.orientation || 'landscape';
+    const height = orientation === 'portrait' ? Math.round(baseHeight * 1.6) : baseHeight;
     if (!p.image) return `width:100%; height:${height}px; background:#f3f4f6; border-radius:6px; display:flex; align-items:center; justify-content:center; color:#9ca3af; font-size:11px;`;
     const zoom = p.zoom || 100;
     const posX = p.posX !== undefined ? p.posX : 50;
@@ -2765,7 +3290,7 @@
       return;
     }
     profileCardsGrid.innerHTML = visible.map((p) => `
-      <div style="border:1px solid #e5e7eb; border-radius:8px; padding:8px; text-align:center; flex:1; min-width:90px;">
+      <div style="border:1px solid #e5e7eb; border-radius:8px; padding:8px; text-align:center; flex:1; min-width:90px; ${p.image ? 'cursor:zoom-in;' : ''}" ${p.image ? `onclick="openImageLightbox('${p.image.replace(/'/g, "\\'")}', '${(p.caption||'').replace(/'/g, "\\'")}')"` : ''}>
         <div style="${profileImageBoxStyle(p, 80)} ${p.caption ? 'margin-bottom:6px;' : ''}">${!p.image ? 'No image' : ''}</div>
         ${p.caption ? `<p style="font-size:10px; color:#374151; line-height:1.3;">${p.caption}</p>` : ''}
       </div>
@@ -2779,6 +3304,13 @@
       <div style="border:1px solid #e5e7eb; border-radius:10px; padding:12px; ${p.enabled === false ? 'opacity:0.5;' : ''}">
         <div id="profilePreview_${i}" style="${profileImageBoxStyle(p, 120)} margin-bottom:8px;">${!p.image ? 'No image' : ''}</div>
         <input type="file" accept="image/*" class="profile-image-input" data-index="${i}" onchange="handleProfileImageChange(${i}, event)" style="margin-bottom:8px; width:100%; font-size:12px;">
+
+        <label style="font-size:11px; color:#6b7280; display:block; margin-bottom:6px;">🖼 Picture Shape:
+          <select onchange="setProfileOrientation(${i}, this.value)" style="width:100%; padding:6px; border:1px solid #d1d5db; border-radius:6px; font-size:12px; margin-top:3px;">
+            <option value="landscape" ${(p.orientation || 'landscape') === 'landscape' ? 'selected' : ''}>Landscape (wide)</option>
+            <option value="portrait" ${p.orientation === 'portrait' ? 'selected' : ''}>Portrait (tall)</option>
+          </select>
+        </label>
 
         <div style="${p.image ? '' : 'display:none;'}" id="profileZoomControls_${i}">
           <label style="font-size:11px; color:#6b7280;">🔍 Zoom: <span id="profileZoomVal_${i}">${p.zoom || 100}%</span></label>
@@ -2810,9 +3342,16 @@
     if (prop === 'zoom') { const label = document.getElementById('profileZoomVal_' + i); if (label) label.innerText = value + '%'; }
   }
 
+  // Switch a card's picture shape between wide (landscape) and tall (portrait)
+  function setProfileOrientation(i, value) {
+    profileCards[i].orientation = value;
+    const preview = document.getElementById('profilePreview_' + i);
+    if (preview) preview.style.cssText = profileImageBoxStyle(profileCards[i], 120) + ' margin-bottom:8px;';
+  }
+
   // Add a new blank profile card slot
   function addProfileCard() {
-    profileCards.push({ image: '', caption: '', enabled: true, zoom: 100, posX: 50, posY: 50 });
+    profileCards.push({ image: '', caption: '', enabled: true, zoom: 100, posX: 50, posY: 50, orientation: 'landscape' });
     renderProfileSettings();
   }
 
@@ -2863,6 +3402,7 @@
 
   // Persist ALL current cards (image + caption + zoom/position + enabled state) — local + Supabase (app_settings.profile_cards)
   function saveProfileCards() {
+    if (!guardWrite('settings', 'Featured Profiles save')) return;
     profileCards.forEach((p, i) => {
       const captionEl = document.querySelector(`.profile-caption-input[data-index="${i}"]`);
       if (captionEl) p.caption = captionEl.value.trim();
@@ -2897,6 +3437,8 @@
     if (!cloudEnabled) {
       cloudStatusPanel.style.background = '#fee2e2';
       cloudStatusText.innerText = '🔴 Not connected to cloud — SUPABASE_URL / ANON_KEY missing or invalid. Data will NOT be saved permanently.';
+      restoreSession();
+      applyAccessControl();
       renderAll();
       return;
     }
@@ -2931,8 +3473,24 @@
       timetable = timetableData.map(t => ({ ...t, semester: parseInt(t.semester) }));
       datesheet = datesheetData.map(d => ({ ...d, semester: parseInt(d.semester) }));
       feeRecords = feeData.map(f => ({ id: f.id, student: f.student, type: f.type, semester: f.semester,
-        amount: parseFloat(f.amount), dueDate: f.due_date, status: f.status }));
-      if (usersData.length) users = usersData;
+        amount: parseFloat(f.amount), dueDate: f.due_date, status: f.status, reason: f.reason || '' }));
+      if (usersData.length) {
+        const seedUsers = users; // the built-in defaults (with passwords/permissions) before we overwrite
+        users = usersData.map(u => {
+          let perms = u.permissions;
+          if (typeof perms === 'string') {
+            try { perms = JSON.parse(perms); } catch (e) { perms = null; }
+          }
+          const seedMatch = seedUsers.find(s => s.username === u.username);
+          return {
+            ...u,
+            // Cloud 'users' table may not have password/permissions columns yet (needs ALTER TABLE) —
+            // fall back to the built-in defaults for known accounts so login still works.
+            password: u.password || (seedMatch ? seedMatch.password : ''),
+            permissions: perms || (seedMatch ? seedMatch.permissions : nonePerms())
+          };
+        });
+      }
 
       if (settingsData.length) {
         const s = settingsData[0];
@@ -2940,6 +3498,19 @@
         if (s.college_name) collegeNameSidebar.innerText = s.college_name;
         if (s.college_name || s.tagline) topbarText.innerText = (s.college_name || 'My College') + (s.tagline ? ' — ' + s.tagline : '');
         if (s.logo_data) { collegeLogoImg.src = s.logo_data; collegeLogoImg.style.display = 'block'; }
+        if (typeof s.guest_enabled === 'boolean') guestSettings.enabled = s.guest_enabled;
+        if (s.guest_pages) {
+          try {
+            const parsedPages = JSON.parse(s.guest_pages);
+            if (Array.isArray(parsedPages)) guestSettings.pages = parsedPages;
+          } catch (e) { console.warn('Could not parse guest_pages:', e); }
+        }
+        if (s.transcript_settings) {
+          try {
+            const parsedTs = JSON.parse(s.transcript_settings);
+            if (parsedTs && typeof parsedTs === 'object') transcriptSettings = { ...transcriptSettings, ...parsedTs };
+          } catch (e) { console.warn('Could not parse transcript_settings:', e); }
+        }
         if (feeSettings.locked) {
           settingAdmissionFee.value = feeSettings.admissionFee;
           settingSemesterFee.value = feeSettings.semesterFee;
@@ -2966,77 +3537,12 @@
       alert('Could not load data from Supabase. Check your SUPABASE_URL/ANON_KEY and internet connection. Running with empty data for now.');
     }
 
+    restoreSession();
+    applyAccessControl();
     renderAll();
   }
 
   loadAllFromSupabase();
-  // ==========================================
-// 🔒 VANILLA JS ROLE & PERMISSION SYSTEM
-// ==========================================
-
-// 1. Current logged in user ka role check karna (Default: 'guest')
-function GetCurrentUserRole() {
-  const savedUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
-  return savedUser && savedUser.role ? savedUser.role : "guest"; 
-}
-
-// 2. Security Check Function
-function canUserModify() {
-  const role = GetCurrentUserRole();
-  return role === "super_admin" || role === "superadmin" || role === "admin"; 
-}
-
-// 3. UI Buttons ko Hide / Disable karne ka function
-function applyUIRestrictions() {
-  const isAllowed = canUserModify();
-
-  if (!isAllowed) {
-    // A) Sabhi Add, Edit, Delete buttons ko hide kar do
-    const restrictedButtons = document.querySelectorAll('.btn-delete, .btn-edit, .btn-add, button[id*="delete"], button[id*="edit"], button[id*="add"]');
-    restrictedButtons.forEach(btn => {
-      btn.style.display = 'none';
-    });
-
-    // B) Settings Menu / Tab ko Visual Lock kar do
-    const settingsTab = document.querySelector('a[href*="settings"]') || document.getElementById('settingsTab');
-    if (settingsTab) {
-      settingsTab.style.opacity = '0.4';
-      settingsTab.style.cursor = 'not-allowed';
-      settingsTab.onclick = function(e) {
-        e.preventDefault();
-        alert("⛔ Access Denied! Only Super Admin can access Settings.");
-        return false;
-      };
-    }
-  }
-}
-
-// Page load hote hi restriction apply karein
-window.addEventListener("DOMContentLoaded", applyUIRestrictions);
-// Global Click Guard: Jab bhi koi button click ho, pehle role check karega
-document.addEventListener("click", function (e) {
-  // Check karein ke clicked element Delete, Edit, ya Save wala button toh nahi?
-  const target = e.target.closest("button, .btn, a");
-  if (!target) return;
-
-  const btnText = target.innerText.toLowerCase();
-  const btnClass = target.className.toLowerCase();
-  const btnId = target.id.toLowerCase();
-
-  // Agar button Delete, Edit, Save, ya Add ka hai
-  const isRestrictedAction = 
-    btnText.includes("delete") || btnText.includes("edit") || btnText.includes("save") || btnText.includes("add") ||
-    btnClass.includes("delete") || btnClass.includes("edit") || btnClass.includes("save") ||
-    btnId.includes("delete") || btnId.includes("edit") || btnId.includes("save");
-
-  if (isRestrictedAction && !canUserModify()) {
-    e.preventDefault();
-    e.stopPropagation();
-    alert("⛔ Access Denied! Only Super Admin can perform this action.");
-  }
-}, true); // 'true' parameter event capture phase mein hi check kar ke action block kar degagit init
-
-
 </script>
 
 </body>
