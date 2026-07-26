@@ -96,12 +96,18 @@
     </div>
     <div class="content">
 
-      <!-- DASHBOARD -->
-      <div id="dashboard" class="page active">
-        <h1>Dashboard</h1>
-        <div class="panel" id="cloudStatusPanel" style="background:#fee2e2; display:none;">
-          <h3 id="cloudStatusText">🔴 Checking cloud connection...</h3>
-        </div>
+     <!-- Dashboard Header Container -->
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
+  
+  <!-- Main Title -->
+  <h1 style="margin: 0; font-size: 24px; font-weight: bold;">Dashboard</h1>
+  
+  <!-- Developing Mode Notice / Developer Tag -->
+  <div style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500;">
+    ⚠️ <strong>Project is in Developing Mode</strong> — Please be patient if any issue persists or any data is missing. <span style="color: #0c5460; font-weight: bold;">| Project Developer: Israr Ahmed Lehri</span>
+  </div>
+
+</div>
 
         <div class="panel">
           <h3>Featured Profiles</h3>
@@ -2811,12 +2817,12 @@
     if (!textarea || !counter) return;
 
     let words = textarea.value.trim().split(/\s+/).filter(Boolean);
-    if (words.length > 30) {
-      words = words.slice(0, 30);
+    if (words.length > 50) {
+      words = words.slice(0, 50);
       textarea.value = words.join(' ');
     }
-    counter.innerText = words.length + ' / 30 words';
-    counter.style.color = words.length >= 30 ? '#dc2626' : '#9ca3af';
+    counter.innerText = words.length + ' / 50 words';
+    counter.style.color = words.length >= 50? '#dc2626' : '#9ca3af';
   }
 
   // Convert an uploaded image file to a base64 data URL, preview it, and reveal the zoom/position sliders
