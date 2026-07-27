@@ -140,6 +140,7 @@
       <p>Management System</p>
     </div>
     <div class="menu-item active" onclick="showPage('dashboard', this)">📊 Dashboard</div>
+    <div class="menu-item" onclick="showPage('challan', this)">🧾 Generate Challan</div>
     <div class="menu-item" onclick="showPage('admission', this)">📝 Admission</div>
     <div class="menu-item" onclick="showPage('fee', this)">💰 Fee</div>
     <div class="menu-item" onclick="showPage('students', this)">🎓 Students</div>
@@ -231,6 +232,56 @@
           <table>
             <thead><tr><th>Name</th><th>Program</th><th>Session</th><th>Status</th></tr></thead>
             <tbody id="recentAdmissionsTable"><tr class="empty-row"><td colspan="4">No admissions yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- GENERATE CHALLAN -->
+      <div id="challan" class="page">
+        <h1>Generate Challan</h1>
+        <p class="subtitle">Bank deposit slip for fee payment (Depositor / Attach with Form / College / Bank copies)</p>
+
+        <div class="panel">
+          <h3>Challan Details</h3>
+          <div class="form-grid">
+            <div class="form-group"><label>Select Existing Student (optional — auto-fills details)</label>
+              <select id="chStudentSelect" onchange="autofillChallanStudent()"><option value="">-- manual entry --</option></select>
+            </div>
+            <div class="form-group"><label>Applicant Name</label><input type="text" id="chName" required></div>
+            <div class="form-group"><label>Father's Name</label><input type="text" id="chFatherName" required></div>
+            <div class="form-group"><label>Roll No</label><input type="text" id="chRollNo"></div>
+            <div class="form-group"><label>Contact / Tel No</label><input type="text" id="chContact"></div>
+            <div class="form-group"><label>Student CNIC / B-Form No</label><input type="text" id="chCnic"></div>
+
+            <div class="form-group"><label>Fee Type</label>
+              <select id="chFeeType" required onchange="toggleChallanSemester()">
+                <option value="">-- select --</option>
+              </select>
+            </div>
+            <div class="form-group" id="chSemesterBox" style="display:none;"><label>Semester</label>
+              <select id="chSemester">
+                <option value="1">First</option><option value="2">Second</option><option value="3">Third</option>
+                <option value="4">Fourth</option><option value="5">Fifth</option><option value="6">Sixth</option>
+                <option value="7">Seventh</option><option value="8">Eighth</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Department</label><input type="text" id="chDepartment" value="Examination"></div>
+            <div class="form-group"><label>Due Date</label><input type="date" id="chDueDate" required></div>
+            <div class="form-group"><label>Amount (Rs.)</label><input type="number" id="chAmount" min="0" required></div>
+            <div class="form-group"><label>Purpose</label><input type="text" id="chPurpose" placeholder="e.g. Registration Fee"></div>
+            <div class="form-group"><label>Description / Particulars (optional)</label><input type="text" id="chDescription"></div>
+          </div>
+          <button class="btn" onclick="generateChallan()">🧾 Generate Challan (Print / Save as PDF)</button>
+        </div>
+
+        <div class="panel">
+          <h3>Generated Challans</h3>
+          <p style="font-size:12px; color:#9ca3af; margin-bottom:10px;">
+            Jab student bank mein fee jama kar de, us challan ko yahan se <b>Confirm Payment</b> karein — Admission Fee wala Admission/Fee record mein "Paid" ho jayega, aur Semester/Form/Recounting/Repeat Fee wala Fee record mein "Paid" create/update ho jayega.
+          </p>
+          <table>
+            <thead><tr><th>Challan No</th><th>Student</th><th>Fee Type</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="challansTable"></tbody>
           </table>
         </div>
       </div>
@@ -336,6 +387,7 @@
                   <option value="">-- select --</option>
                   <option>Admission Fee</option><option>Semester Fee</option><option>Tuition Fee</option>
                   <option>Examination Fee</option><option>Library Fee</option>
+                  <option>Form Fee</option><option>Recounting Fee</option><option>Repeat Fee</option><option>Migration Fee</option>
                   <option>Hostel Fee</option><option>Miscellaneous</option>
                 </select>
               </div>
@@ -1013,16 +1065,39 @@
         </div>
 
         <div class="panel">
-          <h3>Fee Structure</h3>
-          <p style="font-size:13px; color:#9ca3af; margin-bottom:10px;" id="feeLockNote">Set the fixed amounts once, then lock them to prevent accidental changes.</p>
-          <div class="form-grid">
-            <div class="form-group"><label>Admission Fee (Rs.)</label><input type="number" id="settingAdmissionFee" min="0"></div>
-            <div class="form-group"><label>Semester Fee (Rs., per semester)</label><input type="number" id="settingSemesterFee" min="0"></div>
-          </div>
-          <div class="btn-row">
+          <h3>💰 Fee Types &amp; Amounts</h3>
+          <p style="font-size:13px; color:#9ca3af; margin-bottom:10px;" id="feeLockNote">Har fee type ka fixed amount set karein aur "Active" ko un fee types ke liye ON rakhein jo Generate Challan mein dikhni chahiyen. Lock karne se galti se change hone se bach jayenge.</p>
+          <table>
+            <thead><tr><th>Fee Type</th><th>Amount (Rs.)</th><th>Active (Challan mein dikhaye)</th></tr></thead>
+            <tbody id="feeTypesSettingsBody"></tbody>
+          </table>
+          <div class="btn-row" style="margin-top:12px;">
             <button class="btn" id="feeLockBtn" onclick="lockFeeStructure()">🔒 Save &amp; Lock</button>
             <button class="btn btn-outline" id="feeUnlockBtn" style="display:none;" onclick="unlockFeeStructure()">🔓 Unlock to Edit</button>
           </div>
+        </div>
+
+        <div class="panel">
+          <h3>🏦 Bank / Challan Settings</h3>
+          <p style="font-size:13px; color:#9ca3af; margin-bottom:10px;">Ye details "Generate Challan" par print hone waalay bank deposit slip par apply hoti hain.</p>
+          <div class="form-grid">
+            <div class="form-group"><label>Bank Name</label><input type="text" id="chSettingBankName" placeholder="e.g. Habib Bank Limited (HBL)"></div>
+            <div class="form-group"><label>Branch Code</label><input type="text" id="chSettingBranchCode" placeholder="e.g. 0873"></div>
+            <div class="form-group"><label>Account No</label><input type="text" id="chSettingAccountNo" placeholder="e.g. 08730001324203"></div>
+            <div class="form-group"><label>Account Title</label><input type="text" id="chSettingAccountTitle" placeholder="e.g. Fee Collection Account"></div>
+            <div class="form-group"><label>Challan No. Prefix</label><input type="text" id="chSettingNoPrefix" placeholder="e.g. CH-"></div>
+            <div class="form-group"><label>Next Challan No.</label><input type="number" id="chSettingNextNo" min="1"></div>
+            <div class="form-group"><label>Default Tel No (shown on challan)</label><input type="text" id="chSettingTelNo" placeholder="e.g. 03003585492"></div>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:18px; margin:12px 0;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:#374151;">
+              <input type="checkbox" id="chSettingShowLogo" style="width:16px; height:16px;"> Show College Logo on Challan
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:#374151;">
+              <input type="checkbox" id="chSettingShowQr" style="width:16px; height:16px;"> Show QR Code on Challan
+            </label>
+          </div>
+          <button class="btn" onclick="saveChallanSettings()">💾 Save Bank / Challan Settings</button>
         </div>
 
         <div class="panel">
@@ -1140,12 +1215,32 @@
   let timetable = [];
   let datesheet = [];
   let feeRecords = [];
+  let challans = [];
   let feeSettings = { admissionFee: 0, semesterFee: 0, locked: false };
+
+  // A configurable list of ALL fee types with their fixed amount + whether they show up when
+  // Generating a Challan. Editable (and lockable) from Settings → Fee Types & Amounts.
+  let feeTypesConfig = [
+    { name: 'Admission Fee', amount: 0, active: true },
+    { name: 'Semester Fee', amount: 0, active: true },
+    { name: 'Tuition Fee', amount: 0, active: true },
+    { name: 'Examination Fee', amount: 0, active: true },
+    { name: 'Library Fee', amount: 0, active: true },
+    { name: 'Form Fee', amount: 0, active: true },
+    { name: 'Recounting Fee', amount: 0, active: true },
+    { name: 'Repeat Fee', amount: 0, active: true },
+    { name: 'Migration Fee', amount: 0, active: true },
+    { name: 'Hostel Fee', amount: 0, active: true },
+    { name: 'Miscellaneous', amount: 0, active: true }
+  ];
+  function getFeeTypeAmount(name) { const f = feeTypesConfig.find(x => x.name === name); return f ? f.amount : 0; }
+  function isFeeTypeActive(name) { const f = feeTypesConfig.find(x => x.name === name); return f ? f.active : true; }
 
   // ===== ACCESS CONTROL / AUTHENTICATION =====
   // Modules a Super Admin can grant/restrict per user (and per Guest, view-only).
   // 'users' and 'settings' are intentionally NOT in this list — they are always Super-Admin-only.
   const MODULES = [
+    { id: 'challan',     label: 'Generate Challan' },
     { id: 'admission',   label: 'Admission' },
     { id: 'fee',         label: 'Fee' },
     { id: 'students',    label: 'Students' },
@@ -1169,12 +1264,12 @@
     'Super Admin': fullPerms(),
     'Admin': fullPerms(),
     'Principal': fullPerms(),
-    'Controller of Examination': presetPerms(['exams', 'addresult', 'merit', 'reports', 'datesheet']),
-    'BS Coordinator': presetPerms(['admission', 'students', 'courses', 'timetable', 'reports']),
-    'Examination Cell': presetPerms(['exams', 'addresult', 'merit', 'datesheet']),
+    'Controller of Examination': presetPerms(['exams', 'addresult', 'merit', 'reports', 'datesheet', 'challan']),
+    'BS Coordinator': presetPerms(['admission', 'students', 'courses', 'timetable', 'reports', 'challan']),
+    'Examination Cell': presetPerms(['exams', 'addresult', 'merit', 'datesheet', 'challan']),
     'Faculty Member': presetPerms(['attendance', 'exams', 'timetable', 'datesheet']),
-    'Admission Branch': presetPerms(['admission', 'students', 'reports']),
-    'Fee Branch': presetPerms(['fee', 'reports']),
+    'Admission Branch': presetPerms(['admission', 'students', 'reports', 'challan']),
+    'Fee Branch': presetPerms(['fee', 'reports', 'challan']),
     'Attendance Branch': presetPerms(['attendance', 'timetable']),
     'Result Branch': presetPerms(['exams', 'addresult', 'merit', 'datesheet'])
   };
@@ -1183,6 +1278,19 @@
   const SESSION_KEY = 'cms_session_username';
   // Guest = anyone not logged in. Guest is ALWAYS view-only (never add/edit/delete), regardless of settings below.
   let guestSettings = { enabled: true, pages: MODULES.map(m => m.id) };
+
+  // ===== BANK / CHALLAN SETTINGS =====
+  let challanSettings = {
+    bankName: 'Habib Bank Limited (HBL)',
+    branchCode: '',
+    accountNo: '',
+    accountTitle: '',
+    noPrefix: 'CH-',
+    nextNo: 100001,
+    telNo: '',
+    showLogo: true,
+    showQr: true
+  };
 
   // ===== TRANSCRIPT SETTINGS =====
   let transcriptSettings = {
@@ -1247,7 +1355,7 @@
 
   // Show/hide sidebar menu items based on current permissions, and update the login/logout box.
   function applyAccessControl() {
-    const gated = ['admission','fee','students','faculty','departments','courses','attendance','exams','addresult','timetable','datesheet','merit','reports','users','settings'];
+    const gated = ['challan','admission','fee','students','faculty','departments','courses','attendance','exams','addresult','timetable','datesheet','merit','reports','users','settings'];
     gated.forEach(id => {
       const mi = menuItemFor(id);
       if (mi) mi.style.display = canView(id) ? 'flex' : 'none';
@@ -1360,6 +1468,35 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  // ===== BANK / CHALLAN SETTINGS (Settings page) =====
+  function renderChallanSettings() {
+    chSettingBankName.value = challanSettings.bankName;
+    chSettingBranchCode.value = challanSettings.branchCode;
+    chSettingAccountNo.value = challanSettings.accountNo;
+    chSettingAccountTitle.value = challanSettings.accountTitle;
+    chSettingNoPrefix.value = challanSettings.noPrefix;
+    chSettingNextNo.value = challanSettings.nextNo;
+    chSettingTelNo.value = challanSettings.telNo;
+    chSettingShowLogo.checked = challanSettings.showLogo;
+    chSettingShowQr.checked = challanSettings.showQr;
+  }
+  function saveChallanSettings() {
+    if (!guardWrite('settings', 'Bank/Challan settings save')) return;
+    challanSettings = {
+      bankName: chSettingBankName.value.trim(),
+      branchCode: chSettingBranchCode.value.trim(),
+      accountNo: chSettingAccountNo.value.trim(),
+      accountTitle: chSettingAccountTitle.value.trim(),
+      noPrefix: chSettingNoPrefix.value.trim(),
+      nextNo: parseInt(chSettingNextNo.value) || 1,
+      telNo: chSettingTelNo.value.trim(),
+      showLogo: chSettingShowLogo.checked,
+      showQr: chSettingShowQr.checked
+    };
+    sbUpdate('app_settings', 'main', { challan_settings: JSON.stringify(challanSettings) });
+    alert('Bank / Challan Settings saved!');
+  }
+
   // ===== TRANSCRIPT SETTINGS (Settings page) =====
   function renderTranscriptSettings() {
     transcriptAffiliation.value = transcriptSettings.affiliation;
@@ -1421,8 +1558,9 @@
     if (id === 'timetable') populateTimetableDropdowns();
     if (id === 'datesheet') populateDatesheetDropdowns();
     if (id === 'fee') populateFeeDropdown();
-    if (id === 'settings') { renderProfileSettings(); renderAccessControlSettings(); renderTranscriptSettings(); }
+    if (id === 'settings') { renderProfileSettings(); renderAccessControlSettings(); renderTranscriptSettings(); renderChallanSettings(); renderFeeTypesSettings(); }
     if (id === 'addresult') populateAddResultCourses();
+    if (id === 'challan') { populateChallanStudentDropdown(); populateChallanFeeTypeDropdown(); renderChallans(); }
     if (id === 'users') renderPermissionEditor(userRole.value, null);
   }
 
@@ -2271,6 +2409,263 @@
     reportContent.innerHTML = html;
   }
 
+  // ===== GENERATE CHALLAN =====
+  function populateChallanFeeTypeDropdown() {
+    const activeTypes = feeTypesConfig.filter(f => f.active);
+    const current = chFeeType.value;
+    chFeeType.innerHTML = '<option value="">-- select --</option>' +
+      activeTypes.map(f => `<option ${f.name === current ? 'selected' : ''}>${f.name}</option>`).join('');
+  }
+
+  function toggleChallanSemester() {
+    chSemesterBox.style.display = chFeeType.value === 'Semester Fee' ? 'block' : 'none';
+    // Auto-fill the amount from the locked Fee Structure (Settings → Fee Types & Amounts) — user can still override
+    const configuredAmount = getFeeTypeAmount(chFeeType.value);
+    if (configuredAmount) chAmount.value = configuredAmount;
+  }
+
+  function populateChallanStudentDropdown() {
+    chStudentSelect.innerHTML = '<option value="">-- manual entry --</option>' +
+      admissions.map((a, i) => `<option value="${i}">${a.name} (${a.program || ''})</option>`).join('');
+    if (!chDueDate.value) chDueDate.value = new Date().toISOString().split('T')[0];
+  }
+
+  function autofillChallanStudent() {
+    const idx = chStudentSelect.value;
+    if (idx === '') return;
+    const a = admissions[idx];
+    if (!a) return;
+    chName.value = a.name || '';
+    chFatherName.value = a.father || '';
+    chRollNo.value = a.rollNo || '';
+    chCnic.value = a.cnic || '';
+    chContact.value = a.phone || a.contact || '';
+  }
+
+  // Simple English number-to-words converter (supports the Pakistani lakh/crore style up to crores)
+  function numberToWords(num) {
+    num = Math.round(num);
+    if (num === 0) return 'zero';
+    const ones = ['','one','two','three','four','five','six','seven','eight','nine','ten',
+      'eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+    const tens = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+    function twoDigits(n) {
+      if (n < 20) return ones[n];
+      return tens[Math.floor(n/10)] + (n % 10 ? '-' + ones[n % 10] : '');
+    }
+    function threeDigits(n) {
+      let s = '';
+      if (n >= 100) { s += ones[Math.floor(n/100)] + ' hundred'; n %= 100; if (n) s += ' '; }
+      if (n) s += twoDigits(n);
+      return s;
+    }
+    let result = '';
+    const crore = Math.floor(num / 10000000); num %= 10000000;
+    const lakh = Math.floor(num / 100000); num %= 100000;
+    const thousand = Math.floor(num / 1000); num %= 1000;
+    const rest = num;
+    if (crore) result += threeDigits(crore) + ' crore ';
+    if (lakh) result += threeDigits(lakh) + ' lakh ';
+    if (thousand) result += threeDigits(thousand) + ' thousand ';
+    if (rest) result += threeDigits(rest);
+    return result.trim();
+  }
+
+  function generateChallan() {
+    if (!guardWrite('challan', 'Generate Challan')) return;
+    if (!chName.value.trim() || !chFatherName.value.trim() || !chFeeType.value || !chDueDate.value || !chAmount.value) {
+      alert('Please fill in Applicant Name, Father\'s Name, Fee Type, Due Date and Amount.');
+      return;
+    }
+
+    const collegeName = collegeNameSidebar.innerText;
+    const logoSrc = (challanSettings.showLogo && collegeLogoImg && collegeLogoImg.src && collegeLogoImg.style.display !== 'none') ? collegeLogoImg.src : '';
+
+    const feeTypeLabel = chFeeType.value === 'Semester Fee'
+      ? 'Semester Fee (' + chSemester.options[chSemester.selectedIndex].text + ' Semester)'
+      : chFeeType.value;
+
+    const amount = parseFloat(chAmount.value) || 0;
+    const amountWords = numberToWords(amount);
+
+    // Challan No. (auto-incrementing, persisted so the next one issued gets the next number)
+    const challanNo = challanSettings.noPrefix + challanSettings.nextNo;
+    challanSettings.nextNo += 1;
+    sbUpdate('app_settings', 'main', { challan_settings: JSON.stringify(challanSettings) });
+
+    // Save a Pending challan record so it can later be Confirmed once the bank payment is verified
+    const challanRecord = {
+      id: newId(), challanNo, studentName: chName.value.trim(), fatherName: chFatherName.value.trim(),
+      rollNo: chRollNo.value.trim(), cnic: chCnic.value.trim(), contact: chContact.value.trim(),
+      feeType: chFeeType.value, semester: chFeeType.value === 'Semester Fee' ? chSemester.value : '',
+      amount, dueDate: chDueDate.value, purpose: chPurpose.value.trim() || feeTypeLabel, status: 'Pending'
+    };
+    challans.push(challanRecord);
+    sbInsert('challans', { id: challanRecord.id, challan_no: challanRecord.challanNo, student_name: challanRecord.studentName,
+      father_name: challanRecord.fatherName, roll_no: challanRecord.rollNo, cnic: challanRecord.cnic, contact: challanRecord.contact,
+      fee_type: challanRecord.feeType, semester: challanRecord.semester, amount: challanRecord.amount,
+      due_date: challanRecord.dueDate, purpose: challanRecord.purpose, status: challanRecord.status });
+    renderChallans();
+
+    const telNo = chContact.value.trim() || challanSettings.telNo;
+    const barcodeSrc = 'https://barcode.tec-it.com/barcode.ashx?data=' + encodeURIComponent(challanNo) + '&code=Code128&dpi=120';
+    const qrData = encodeURIComponent(`${collegeName} | Challan:${challanNo} | ${chName.value} | Rs.${amount} | Due:${chDueDate.value}`);
+    const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' + qrData;
+    const showQr = challanSettings.showQr;
+
+    const copyLabels = ['Depositors Copy - 1', 'Attach with Exam/Admission etc. Form - 2', collegeName.split(' ')[0] + ' Copy - 3', 'Bank Copy - 4'];
+
+    function buildCopy(label) {
+      return `
+        <div class="copy">
+          <div class="copy-label">${label}</div>
+          <div class="letterhead">
+            ${logoSrc ? `<img src="${logoSrc}">` : ''}
+          </div>
+          <div class="challan-no"><u>Challan No:</u> &nbsp;<b>${challanNo}</b></div>
+          <div class="college-name">${collegeName}</div>
+          <div class="line">Computer Generated Deposit Slip</div>
+          <div class="line"><u>${collegeName.split(' ').slice(0,3).join(' ')} Fee Collection A/No: ${challanSettings.accountNo || '-'}</u></div>
+          <div class="line"><u>${challanSettings.bankName || '-'}${challanSettings.branchCode ? ' (Br. Code: ' + challanSettings.branchCode + ')' : ''}</u></div>
+          ${challanSettings.accountTitle ? `<div class="line">A/C Title: ${challanSettings.accountTitle}</div>` : ''}
+          <img class="barcode" src="${barcodeSrc}">
+
+          <div class="field"><b>Applicant Name:</b> ${chName.value}</div>
+          <div class="field"><b>Father's Name:</b> ${chFatherName.value}</div>
+          <div class="field"><b>Student CNIC / B-Form No:</b> ${chCnic.value || '-'}</div>
+          ${chDescription.value.trim() ? `<div class="field"><b>Particulars:</b> ${chDescription.value.trim()}</div>` : ''}
+          <div class="field"><b>Department:</b> ${chDepartment.value || '-'}</div>
+          <div class="field"><b>Due Date:</b> ${chDueDate.value}</div>
+          <div class="field"><b>Amount:</b> Rs=${amount.toLocaleString()}/-<br><span class="words">(${amountWords})</span></div>
+          <div class="field"><b>Purpose:</b> ${chPurpose.value || feeTypeLabel}</div>
+          <div class="field"><b>Fee Type:</b> ${feeTypeLabel}</div>
+
+          <div class="bottom-row">
+            <div class="sign-block">
+              <div class="field">Tel No: ${telNo || '-'}</div>
+              <div class="field">Depositer Signatures:_______</div>
+              <div class="field">Cashier:________ &nbsp; Officer:________</div>
+            </div>
+            ${showQr ? `<img class="qr" src="${qrSrc}">` : ''}
+          </div>
+
+          <div class="field" style="margin-top:10px;">Bank Stamp:</div>
+
+          <div class="notes">
+            Note: Challan Must be Paid on Generation / Due Date<br>
+            Scan the QR code to get the latest payment status<br>
+            Over-Writing or Any modification is Not Accepted<br>
+            Copy of paid challan must be retained by student<br>
+            ${collegeName.split(' ')[0]} not responsible, if paid receipt is lost by student
+          </div>
+        </div>
+      `;
+    }
+
+    const win = window.open('', '_blank');
+    if (!win) { alert('Popup blocked! Please allow popups for this page and try again.'); return; }
+    win.document.write(`
+      <html>
+      <head>
+        <title>Challan - ${challanNo}</title>
+        <style>
+          @page { size: A4 landscape; margin: 8mm; }
+          * { box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; font-size:10px; color:#111; }
+          .sheet { display:grid; grid-template-columns: repeat(4, 1fr); }
+          .copy { border-right:1px dashed #999; padding:6px 10px; }
+          .copy:last-child { border-right:none; }
+          .copy-label { font-size:11px; margin-bottom:6px; }
+          .letterhead { text-align:left; }
+          .letterhead img { max-width:45px; max-height:45px; }
+          .challan-no { font-size:10.5px; margin:4px 0 2px; }
+          .college-name { font-weight:bold; font-size:12px; }
+          .line { font-size:9.5px; margin-bottom:1px; }
+          .barcode { max-width:100%; height:28px; margin:5px 0 8px; }
+          .field { font-size:10px; margin-bottom:5px; }
+          .words { font-size:8.5px; color:#444; }
+          .bottom-row { display:flex; justify-content:space-between; align-items:flex-end; margin-top:6px; }
+          .sign-block { flex:1; }
+          .qr { width:55px; height:55px; }
+          .notes { font-size:7.5px; color:#333; margin-top:14px; line-height:1.5; }
+        </style>
+      </head>
+      <body>
+        <div class="sheet">
+          ${copyLabels.map(l => buildCopy(l)).join('')}
+        </div>
+        <script>window.onload = () => setTimeout(() => window.print(), 300);<\/script>
+      </body>
+      </html>
+    `);
+    win.document.close();
+  }
+
+  function renderChallans() {
+    if (!challans.length) {
+      challansTable.innerHTML = '<tr class="empty-row"><td colspan="7">No challans generated yet.</td></tr>';
+      return;
+    }
+    challansTable.innerHTML = challans.map((c, i) => `
+      <tr>
+        <td>${c.challanNo}</td>
+        <td>${c.studentName}</td>
+        <td>${c.feeType}${c.semester ? ' (Sem ' + c.semester + ')' : ''}</td>
+        <td>Rs. ${c.amount.toLocaleString()}</td>
+        <td>${c.dueDate}</td>
+        <td style="color:${c.status === 'Confirmed' ? '#059669' : '#d97706'}; font-weight:600;">${c.status}</td>
+        <td><div class="btn-row">
+          ${c.status !== 'Confirmed' ? `<button class="btn btn-sm" onclick="confirmChallanPayment(${i})">✅ Confirm Payment</button>` : ''}
+          <button class="btn btn-danger btn-sm" onclick="deleteChallan(${i})">Delete</button>
+        </div></td>
+      </tr>
+    `).join('');
+  }
+
+  // Confirming a challan marks the underlying fee as Paid — Admission Fee challans update/create the
+  // Admission Fee record (shown in Fee module), and Semester/Form/Recounting/Repeat Fee challans
+  // update/create the matching Fee record for that student.
+  function confirmChallanPayment(i) {
+    if (!guardWrite('challan', 'Confirm Challan Payment')) return;
+    const c = challans[i];
+    if (!c || c.status === 'Confirmed') return;
+    if (!confirm(`Confirm that Challan No ${c.challanNo} (Rs. ${c.amount.toLocaleString()}) has actually been paid at the bank? This will mark the matching fee record as Paid.`)) return;
+
+    // Try to find a matching (still-unpaid) fee record for this student + fee type (+ semester, if applicable)
+    let match = feeRecords.find(f => f.student === c.studentName && f.type === c.feeType &&
+      (c.feeType !== 'Semester Fee' || String(f.semester) === String(c.semester)) && f.status !== 'Paid');
+
+    if (match) {
+      match.status = 'Paid';
+      sbUpdate('fee_records', match.id, { status: 'Paid' });
+    } else {
+      // No existing fee record — create one now (walk-in / independently generated challan)
+      const newRecord = {
+        id: newId(), student: c.studentName, type: c.feeType,
+        semester: c.feeType === 'Semester Fee' ? c.semester : '-',
+        amount: c.amount, dueDate: c.dueDate, status: 'Paid', reason: ''
+      };
+      feeRecords.push(newRecord);
+      sbInsert('fee_records', { id: newRecord.id, student: newRecord.student, type: newRecord.type,
+        semester: newRecord.semester, amount: newRecord.amount, due_date: newRecord.dueDate, status: newRecord.status, reason: '' });
+    }
+
+    c.status = 'Confirmed';
+    sbUpdate('challans', c.id, { status: 'Confirmed' });
+    renderChallans();
+    renderFee();
+    renderDashboardStats();
+    alert('Payment confirmed! Fee record updated to Paid.' + (c.feeType === 'Admission Fee' ? ' (Admission Fee record)' : ' (Fee module record)'));
+  }
+
+  function deleteChallan(i) {
+    if (!guardWrite('challan', 'Delete Challan')) return;
+    const record = challans[i];
+    challans.splice(i, 1);
+    if (record) sbDelete('challans', record.id);
+    renderChallans();
+  }
+
   // ===== TRANSCRIPT (professional printable format) =====
   function generateTranscript() {
     const studentName = transcriptStudent.value;
@@ -2844,29 +3239,50 @@
     renderFee();
   }
 
-  // ----- Fee Structure Lock -----
+  // ----- Fee Types & Amounts (Settings page) -----
+  function renderFeeTypesSettings() {
+    const locked = feeSettings.locked;
+    feeTypesSettingsBody.innerHTML = feeTypesConfig.map((f, i) => `
+      <tr>
+        <td>${f.name}</td>
+        <td><input type="number" min="0" class="feeTypeAmountInput" data-index="${i}" value="${f.amount}" ${locked ? 'disabled' : ''} style="width:120px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px;"></td>
+        <td style="text-align:center;"><input type="checkbox" class="feeTypeActiveChk" data-index="${i}" ${f.active ? 'checked' : ''} ${locked ? 'disabled' : ''} style="width:16px; height:16px;"></td>
+      </tr>
+    `).join('');
+    feeLockBtn.style.display = locked ? 'none' : 'inline-block';
+    feeUnlockBtn.style.display = locked ? 'inline-block' : 'none';
+    feeLockNote.innerText = locked
+      ? '🔒 Locked — inputs are read-only. Click "Unlock to Edit" to make changes.'
+      : 'Har fee type ka fixed amount set karein aur "Active" ko un fee types ke liye ON rakhein jo Generate Challan mein dikhni chahiyen. Lock karne se galti se change hone se bach jayenge.';
+  }
+
   function lockFeeStructure() {
-    const admissionFee = parseFloat(settingAdmissionFee.value) || 0;
-    const semesterFee = parseFloat(settingSemesterFee.value) || 0;
-    if (!confirm('Lock Admission Fee = Rs.' + admissionFee + ' and Semester Fee = Rs.' + semesterFee + ' for all students? You can unlock later to change.')) return;
-    feeSettings = { admissionFee, semesterFee, locked: true };
-    settingAdmissionFee.disabled = true;
-    settingSemesterFee.disabled = true;
-    feeLockBtn.style.display = 'none';
-    feeUnlockBtn.style.display = 'inline-block';
-    feeLockNote.innerText = '🔒 Locked — Admission Fee: Rs.' + admissionFee + ' | Semester Fee: Rs.' + semesterFee + ' per semester.';
-    sbUpdate('app_settings', 'main', { admission_fee: admissionFee, semester_fee: semesterFee, fee_locked: true });
-    alert('Fee structure locked!');
+    if (!guardWrite('settings', 'Fee structure save/lock')) return;
+    feeTypesConfig.forEach((f, i) => {
+      const amountEl = document.querySelector(`.feeTypeAmountInput[data-index="${i}"]`);
+      const activeEl = document.querySelector(`.feeTypeActiveChk[data-index="${i}"]`);
+      if (amountEl) f.amount = parseFloat(amountEl.value) || 0;
+      if (activeEl) f.active = activeEl.checked;
+    });
+    if (!confirm('Save and lock these fee amounts / active types? You can unlock later to change.')) return;
+    feeSettings.locked = true;
+    // Keep the legacy admissionFee/semesterFee fields in sync for older parts of the app
+    feeSettings.admissionFee = getFeeTypeAmount('Admission Fee');
+    feeSettings.semesterFee = getFeeTypeAmount('Semester Fee');
+    renderFeeTypesSettings();
+    populateChallanFeeTypeDropdown();
+    sbUpdate('app_settings', 'main', {
+      admission_fee: feeSettings.admissionFee, semester_fee: feeSettings.semesterFee, fee_locked: true,
+      fee_types_config: JSON.stringify(feeTypesConfig)
+    });
+    alert('Fee structure saved and locked!');
   }
 
   function unlockFeeStructure() {
+    if (!guardWrite('settings', 'Fee structure unlock')) return;
     if (!confirm('Unlock fee structure for editing?')) return;
     feeSettings.locked = false;
-    settingAdmissionFee.disabled = false;
-    settingSemesterFee.disabled = false;
-    feeLockBtn.style.display = 'inline-block';
-    feeUnlockBtn.style.display = 'none';
-    feeLockNote.innerText = 'Set the fixed amounts once, then lock them to prevent accidental changes.';
+    renderFeeTypesSettings();
     sbUpdate('app_settings', 'main', { fee_locked: false });
   }
 
@@ -3428,6 +3844,7 @@
     renderUsers();
     renderDashboardStats();
     renderProfileCards();
+    renderChallans();
   }
 
   // ===== INITIAL LOAD FROM SUPABASE =====
@@ -3446,7 +3863,7 @@
     try {
       const [
         admissionsData, facultyData, departmentsData, coursesData,
-        examMarksData, timetableData, datesheetData, feeData, usersData, settingsData
+        examMarksData, timetableData, datesheetData, feeData, usersData, settingsData, challansData
       ] = await Promise.all([
         sbFetchAll('admissions'),
         sbFetchAll('faculty'),
@@ -3457,7 +3874,8 @@
         sbFetchAll('datesheet'),
         sbFetchAll('fee_records'),
         sbFetchAll('users'),
-        sbFetchAll('app_settings')
+        sbFetchAll('app_settings'),
+        sbFetchAll('challans')
       ]);
 
       admissions = admissionsData.map(a => ({
@@ -3474,6 +3892,10 @@
       datesheet = datesheetData.map(d => ({ ...d, semester: parseInt(d.semester) }));
       feeRecords = feeData.map(f => ({ id: f.id, student: f.student, type: f.type, semester: f.semester,
         amount: parseFloat(f.amount), dueDate: f.due_date, status: f.status, reason: f.reason || '' }));
+      challans = challansData.map(c => ({ id: c.id, challanNo: c.challan_no, studentName: c.student_name,
+        fatherName: c.father_name, rollNo: c.roll_no, cnic: c.cnic, contact: c.contact, feeType: c.fee_type,
+        semester: c.semester, amount: parseFloat(c.amount), dueDate: c.due_date, purpose: c.purpose,
+        status: c.status || 'Pending' }));
       if (usersData.length) {
         const seedUsers = users; // the built-in defaults (with passwords/permissions) before we overwrite
         users = usersData.map(u => {
@@ -3505,20 +3927,23 @@
             if (Array.isArray(parsedPages)) guestSettings.pages = parsedPages;
           } catch (e) { console.warn('Could not parse guest_pages:', e); }
         }
+        if (s.challan_settings) {
+          try {
+            const parsedCh = JSON.parse(s.challan_settings);
+            if (parsedCh && typeof parsedCh === 'object') challanSettings = { ...challanSettings, ...parsedCh };
+          } catch (e) { console.warn('Could not parse challan_settings:', e); }
+        }
         if (s.transcript_settings) {
           try {
             const parsedTs = JSON.parse(s.transcript_settings);
             if (parsedTs && typeof parsedTs === 'object') transcriptSettings = { ...transcriptSettings, ...parsedTs };
           } catch (e) { console.warn('Could not parse transcript_settings:', e); }
         }
-        if (feeSettings.locked) {
-          settingAdmissionFee.value = feeSettings.admissionFee;
-          settingSemesterFee.value = feeSettings.semesterFee;
-          settingAdmissionFee.disabled = true;
-          settingSemesterFee.disabled = true;
-          feeLockBtn.style.display = 'none';
-          feeUnlockBtn.style.display = 'inline-block';
-          feeLockNote.innerText = '🔒 Locked — Admission Fee: Rs.' + feeSettings.admissionFee + ' | Semester Fee: Rs.' + feeSettings.semesterFee + ' per semester.';
+        if (s.fee_types_config) {
+          try {
+            const parsedFt = JSON.parse(s.fee_types_config);
+            if (Array.isArray(parsedFt) && parsedFt.length) feeTypesConfig = parsedFt;
+          } catch (e) { console.warn('Could not parse fee_types_config:', e); }
         }
         if (s.profile_cards) {
           try {
