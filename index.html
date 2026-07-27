@@ -250,8 +250,8 @@
             <div class="form-group"><label>Applicant Name</label><input type="text" id="chName" required></div>
             <div class="form-group"><label>Father's Name</label><input type="text" id="chFatherName" required></div>
             <div class="form-group"><label>Roll No</label><input type="text" id="chRollNo"></div>
-            <div class="form-group"><label>Contact / Tel No</label><input type="text" id="chContact"></div>
-            <div class="form-group"><label>Student CNIC / B-Form No</label><input type="text" id="chCnic"></div>
+            <div class="form-group"><label>Contact / Tel No <span style="color:#9ca3af; font-weight:normal;">(optional)</span></label><input type="text" id="chContact" placeholder="03000000000"></div>
+            <div class="form-group"><label>Student CNIC / B-Form No <span style="color:#9ca3af; font-weight:normal;">(optional)</span></label><input type="text" id="chCnic" placeholder="00000-0000000-3"></div>
 
             <div class="form-group"><label>Fee Type</label>
               <select id="chFeeType" required onchange="toggleChallanSemester()">
@@ -1068,9 +1068,14 @@
           <h3>💰 Fee Types &amp; Amounts</h3>
           <p style="font-size:13px; color:#9ca3af; margin-bottom:10px;" id="feeLockNote">Har fee type ka fixed amount set karein aur "Active" ko un fee types ke liye ON rakhein jo Generate Challan mein dikhni chahiyen. Lock karne se galti se change hone se bach jayenge.</p>
           <table>
-            <thead><tr><th>Fee Type</th><th>Amount (Rs.)</th><th>Active (Challan mein dikhaye)</th></tr></thead>
+            <thead><tr><th>Fee Type</th><th>Amount (Rs.)</th><th>Active (Challan mein dikhaye)</th><th>Action</th></tr></thead>
             <tbody id="feeTypesSettingsBody"></tbody>
           </table>
+          <div class="form-grid" id="addFeeTypeRow" style="margin-top:14px; align-items:flex-end;">
+            <div class="form-group"><label>New Fee Type Name</label><input type="text" id="newFeeTypeName" placeholder="e.g. Sports Fee"></div>
+            <div class="form-group"><label>Amount (Rs.)</label><input type="number" id="newFeeTypeAmount" min="0" value="0"></div>
+            <div class="form-group"><button type="button" class="btn btn-outline" onclick="addFeeType()">➕ Add Fee Type</button></div>
+          </div>
           <div class="btn-row" style="margin-top:12px;">
             <button class="btn" id="feeLockBtn" onclick="lockFeeStructure()">🔒 Save &amp; Lock</button>
             <button class="btn btn-outline" id="feeUnlockBtn" style="display:none;" onclick="unlockFeeStructure()">🔓 Unlock to Edit</button>
@@ -1127,6 +1132,36 @@
             <input type="text" id="transcriptErrorsText" placeholder="Errors and omissions are accepted.">
           </div>
           <button class="btn" onclick="saveTranscriptSettings()">💾 Save Transcript Settings</button>
+        </div>
+
+        <div class="panel">
+          <h3>🗄 Data Management</h3>
+          <p style="font-size:13px; color:#9ca3af; margin-bottom:14px;">Dummy/demo data test karne ke liye generate karein, phir sirf usay clear kar dein — aapka asal (real) data untouched rahega. Real data ka backup bhi le saktay hain aur baad mein restore kar saktay hain.</p>
+
+          <div style="margin-bottom:16px;">
+            <b style="font-size:13px;">🧪 Dummy / Demo Data</b>
+            <p style="font-size:12px; color:#9ca3af; margin:4px 0 8px;">10 Departments, 40 Courses, 50 Faculty, 40 Students (real-looking names), full results &amp; fee records.</p>
+            <div class="btn-row">
+              <button class="btn" onclick="generateDummyData()">🧪 Generate Dummy Data</button>
+              <button class="btn btn-outline" onclick="clearDummyData()">🧹 Clear Dummy Data Only</button>
+            </div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <b style="font-size:13px;">💾 Backup &amp; Restore (real data)</b>
+            <p style="font-size:12px; color:#9ca3af; margin:4px 0 8px;">Download a full backup file, or restore everything from a previously saved backup.</p>
+            <div class="btn-row">
+              <button class="btn" onclick="backupAllData()">💾 Backup All Data (Download)</button>
+              <button class="btn btn-outline" onclick="document.getElementById('restoreFileInput').click()">📤 Restore from Backup</button>
+              <input type="file" id="restoreFileInput" accept="application/json" style="display:none;" onchange="restoreDataFromBackup(event)">
+            </div>
+          </div>
+
+          <div>
+            <b style="font-size:13px; color:#dc2626;">⚠️ Danger Zone</b>
+            <p style="font-size:12px; color:#9ca3af; margin:4px 0 8px;">Permanently deletes EVERYTHING (dummy AND real data) — including the cloud database. Cannot be undone unless you have a backup.</p>
+            <button class="btn btn-danger" onclick="clearAllData()">🗑 Delete ALL Data</button>
+          </div>
         </div>
 
         <div class="panel">
@@ -1188,7 +1223,9 @@
   }
   async function sbUpdate(table, id, record) {
     if (!cloudEnabled) return;
-    const { error } = await db.from(table).update(record).eq('id', id);
+    // upsert (not a plain update): if the row doesn't exist yet, this CREATES it instead of silently
+    // doing nothing — this is what makes Settings actually persist to the cloud on first save.
+    const { error } = await db.from(table).upsert({ id, ...record });
     if (error) console.error('[Supabase update:' + table + ']', error.message);
   }
   async function sbDelete(table, id) {
@@ -2515,7 +2552,7 @@
     // Save a Pending challan record so it can later be Confirmed once the bank payment is verified
     const challanRecord = {
       id: newId(), challanNo, studentName: chName.value.trim(), fatherName: chFatherName.value.trim(),
-      rollNo: chRollNo.value.trim(), cnic: chCnic.value.trim(), contact: chContact.value.trim(),
+      rollNo: chRollNo.value.trim(), cnic: chCnic.value.trim() || '00000-0000000-3', contact: chContact.value.trim() || '03000000000',
       feeType: chFeeType.value, semester: chFeeType.value === 'Semester Fee' ? chSemester.value : '',
       amount, dueDate: chDueDate.value, purpose: chPurpose.value.trim() || feeTypeLabel, status: 'Pending'
     };
@@ -2526,7 +2563,7 @@
       due_date: challanRecord.dueDate, purpose: challanRecord.purpose, status: challanRecord.status });
     renderChallans();
 
-    const telNo = chContact.value.trim() || challanSettings.telNo;
+    const telNo = chContact.value.trim() || challanSettings.telNo || '03000000000';
     const barcodeSrc = 'https://barcode.tec-it.com/barcode.ashx?data=' + encodeURIComponent(challanNo) + '&code=Code128&dpi=120';
     const qrData = encodeURIComponent(`${collegeName} | Challan:${challanNo} | ${chName.value} | Rs.${amount} | Due:${chDueDate.value}`);
     const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=' + qrData;
@@ -2551,7 +2588,7 @@
 
           <div class="field"><b>Applicant Name:</b> ${chName.value}</div>
           <div class="field"><b>Father's Name:</b> ${chFatherName.value}</div>
-          <div class="field"><b>Student CNIC / B-Form No:</b> ${chCnic.value || '-'}</div>
+          <div class="field"><b>Student CNIC / B-Form No:</b> ${chCnic.value.trim() || '00000-0000000-3'}</div>
           ${chDescription.value.trim() ? `<div class="field"><b>Particulars:</b> ${chDescription.value.trim()}</div>` : ''}
           <div class="field"><b>Department:</b> ${chDepartment.value || '-'}</div>
           <div class="field"><b>Due Date:</b> ${chDueDate.value}</div>
@@ -3266,13 +3303,33 @@
         <td>${f.name}</td>
         <td><input type="number" min="0" class="feeTypeAmountInput" data-index="${i}" value="${f.amount}" ${locked ? 'disabled' : ''} style="width:120px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px;"></td>
         <td style="text-align:center;"><input type="checkbox" class="feeTypeActiveChk" data-index="${i}" ${f.active ? 'checked' : ''} ${locked ? 'disabled' : ''} style="width:16px; height:16px;"></td>
+        <td>${locked ? '' : `<button type="button" class="btn btn-danger btn-sm" onclick="deleteFeeType(${i})">Delete</button>`}</td>
       </tr>
     `).join('');
     feeLockBtn.style.display = locked ? 'none' : 'inline-block';
     feeUnlockBtn.style.display = locked ? 'inline-block' : 'none';
+    addFeeTypeRow.style.display = locked ? 'none' : 'grid';
     feeLockNote.innerText = locked
       ? '🔒 Locked — inputs are read-only. Click "Unlock to Edit" to make changes.'
       : 'Har fee type ka fixed amount set karein aur "Active" ko un fee types ke liye ON rakhein jo Generate Challan mein dikhni chahiyen. Lock karne se galti se change hone se bach jayenge.';
+  }
+
+  function addFeeType() {
+    if (feeSettings.locked) { alert('Pehle "Unlock to Edit" karein.'); return; }
+    const name = newFeeTypeName.value.trim();
+    if (!name) { alert('Fee Type ka naam likhein.'); return; }
+    if (feeTypesConfig.some(f => f.name.toLowerCase() === name.toLowerCase())) { alert('Ye fee type pehle se maujood hai.'); return; }
+    feeTypesConfig.push({ name, amount: parseFloat(newFeeTypeAmount.value) || 0, active: true });
+    newFeeTypeName.value = '';
+    newFeeTypeAmount.value = '0';
+    renderFeeTypesSettings();
+  }
+
+  function deleteFeeType(i) {
+    if (feeSettings.locked) { alert('Pehle "Unlock to Edit" karein.'); return; }
+    if (!confirm('Delete fee type "' + feeTypesConfig[i].name + '"?')) return;
+    feeTypesConfig.splice(i, 1);
+    renderFeeTypesSettings();
   }
 
   function lockFeeStructure() {
@@ -3487,62 +3544,101 @@
   // ===== DUMMY / TEST DATA GENERATOR =====
   async function generateDummyData() {
     if (!guardWrite('settings', 'Generate dummy data')) return;
-    if (admissions.length || faculty.length || courses.length) {
-      if (!confirm('This will ADD demo data on top of existing data. Continue?')) return;
-    }
+    if (!confirm('This will ADD realistic demo data (10 departments, 40 courses, 50 faculty, 40 students with results & fee records) on top of any existing data.\n\nDummy records are tagged so you can clear ONLY the dummy data later — your real data stays untouched. Continue?')) return;
 
     const programsList = ['BS Computer Science','BS Mathematics','BS Physics','BS Chemistry','BS English'];
     const sessionsList = ['2024-2028','2025-2029','2026-2030'];
     const deptNames = ['Computer Science','Mathematics','Physics','Chemistry','English','Botany','Zoology','Economics','Statistics','Islamic Studies'];
 
-    // 10 Departments
-    const newDepartments = deptNames.map((d,i) => ({ id: newId(), name: d, code: 'DEPT-' + (i+1).toString().padStart(2,'0'), hod: 'Dr. ' + d + ' Head' }));
+    // Real-sounding course titles per department (used instead of generic "Course S1-1")
+    const coursePool = {
+      'Computer Science': ['Programming Fundamentals','Data Structures','Database Systems','Computer Networks','Operating Systems','Software Engineering','Web Technologies','Artificial Intelligence'],
+      'Mathematics': ['Calculus I','Calculus II','Linear Algebra','Real Analysis','Abstract Algebra','Differential Equations','Number Theory','Mathematical Statistics'],
+      'Physics': ['Mechanics','Electromagnetism','Thermodynamics','Optics','Quantum Mechanics','Modern Physics','Electronics','Nuclear Physics'],
+      'Chemistry': ['Organic Chemistry','Inorganic Chemistry','Physical Chemistry','Analytical Chemistry','Biochemistry','Environmental Chemistry','Industrial Chemistry','Polymer Chemistry'],
+      'English': ['English Grammar','British Literature','American Literature','Linguistics','Creative Writing','Prose','Poetry','Drama'],
+      'Botany': ['Plant Anatomy','Plant Physiology','Mycology','Plant Taxonomy','Plant Ecology','Cell Biology','Plant Genetics','Microbiology'],
+      'Zoology': ['Invertebrate Zoology','Vertebrate Zoology','Animal Physiology','Genetics','Entomology','Animal Ecology','Cell Biology','Evolution'],
+      'Economics': ['Microeconomics','Macroeconomics','Development Economics','Public Finance','International Trade','Econometrics','Monetary Economics','Labor Economics'],
+      'Statistics': ['Probability Theory','Statistical Inference','Regression Analysis','Sampling Techniques','Time Series Analysis','Multivariate Analysis','Statistical Computing','Design of Experiments'],
+      'Islamic Studies': ['Quranic Studies','Hadith Studies','Islamic History','Comparative Religion','Islamic Jurisprudence (Fiqh)','Seerah-un-Nabi','Islamic Philosophy','Tafseer-ul-Quran']
+    };
+
+    // Realistic name pools
+    const maleFirstNames = ['Ahmed','Bilal','Usman','Hamza','Faisal','Kamran','Zubair','Naveed','Imran','Adeel','Waqas','Junaid','Shahzad','Tariq','Asad','Kashif','Rizwan','Saad','Yasir','Farhan','Salman','Danish','Fahad','Nadeem','Hassan','Hussain','Ayaz','Arsalan','Zeeshan','Noman','Sajjad','Irfan','Qasim','Umer','Talha','Sohail','Adnan','Khurram','Sikandar','Waheed'];
+    const femaleFirstNames = ['Ayesha','Sana','Mahnoor','Fatima','Zainab','Rabia','Amna','Sadia','Hina','Nadia','Sobia','Farah','Iqra','Anum','Mariam','Tehmina','Sundas','Bushra','Uzma','Saima'];
+    const surnames = ['Khan','Baloch','Achakzai','Bugti','Marri','Raisani','Domki','Zehri','Mengal','Lehri','Rind','Jamali','Panezai','Kakar','Tareen','Durrani','Barozai','Nasir','Sarparah','Khilji'];
+    function randPick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    // 10 Departments — HOD given a realistic name too
+    const newDepartments = deptNames.map((d, i) => ({
+      id: newId(), name: d, code: 'DEPT-' + (i+1).toString().padStart(2,'0'),
+      hod: 'Dr. ' + randPick(maleFirstNames.concat(femaleFirstNames)) + ' ' + randPick(surnames),
+      isDummy: true
+    }));
     departments.push(...newDepartments);
 
-    // 50 Faculty
+    // 50 Faculty — realistic names
     const designations = ['Lecturer','Assistant Professor','Associate Professor','Professor'];
     const newFaculty = [];
     for (let i = 1; i <= 50; i++) {
       const dept = deptNames[i % deptNames.length];
+      const isMale = Math.random() > 0.3;
+      const fname = isMale ? randPick(maleFirstNames) : randPick(femaleFirstNames);
       newFaculty.push({
-        id: newId(), name: 'Faculty Member ' + i,
+        id: newId(), name: (isMale ? 'Prof. ' : 'Dr. ') + fname + ' ' + randPick(surnames),
         designation: designations[i % designations.length],
         department: dept,
         phone: '03' + (100000000 + i * 137).toString().slice(0,9),
-        email: 'faculty' + i + '@gbpgc.edu.pk'
+        email: 'faculty' + i + '@gbpgc.edu.pk',
+        isDummy: true
       });
     }
     faculty.push(...newFaculty);
 
-    // 40 Courses — 5 per semester across 8 semesters
+    // 40 Courses — 5 per semester across 8 semesters, real titles pulled from the matching department's pool
     const newCourses = [];
+    const usedPerDept = {};
     for (let sem = 1; sem <= 8; sem++) {
       for (let n = 1; n <= 5; n++) {
         const dept = deptNames[(sem + n) % deptNames.length];
-        newCourses.push({ id: newId(), name: 'Course S' + sem + '-' + n, code: 'C' + sem + '0' + n, credit: 3, department: dept, semester: sem });
+        usedPerDept[dept] = usedPerDept[dept] || 0;
+        const pool = coursePool[dept];
+        const title = pool[usedPerDept[dept] % pool.length];
+        usedPerDept[dept]++;
+        newCourses.push({ id: newId(), name: title, code: 'C' + sem + '0' + n, credit: 3, department: dept, semester: sem, isDummy: true });
       }
     }
     courses.push(...newCourses);
 
-    // 40 Students (Admissions)
+    // 40 Students (Admissions) — realistic full names, father names (same surname, different first name)
     const studentNames = [];
     const newAdmissions = [];
-    const statusPool = ['Active','Active','Active','Active','Active','Active','Passed Out','Passed Out','Dropout','Quit']; // ~60% active, rest mixed
+    const usedNames = new Set();
     for (let i = 1; i <= 40; i++) {
       const program = programsList[i % programsList.length];
       const session = sessionsList[i % sessionsList.length];
-      const name = 'Student ' + i;
+      const isMale = Math.random() > 0.35;
+      const surname = randPick(surnames);
+      let studentFirst, name;
+      do {
+        studentFirst = isMale ? randPick(maleFirstNames) : randPick(femaleFirstNames);
+        name = studentFirst + ' ' + surname;
+      } while (usedNames.has(name));
+      usedNames.add(name);
+      const fatherFirst = randPick(maleFirstNames);
       studentNames.push(name);
       newAdmissions.push({
         id: newId(), rollNo: generateRollNo(program, session),
         name: name,
-        father: 'Father of Student ' + i,
+        father: fatherFirst + ' ' + surname,
         cnic: '54400-' + (1000000 + i).toString() + '-1',
         phone: '03' + (200000000 + i * 91).toString().slice(0,9),
         program: program,
         session: session,
         currentSemester: (i % 8) + 1,
-        status: statusPool[i % statusPool.length]
+        status: 'Active',
+        isDummy: true
       });
     }
     admissions.push(...newAdmissions);
@@ -3563,30 +3659,174 @@
           newExamMarks.push({
             id: newId(), student: name, program: admissions.find(a => a.name === name).program,
             course: c.name, code: c.code, semester: sem, credit: c.credit,
-            total: total, percentage: total, gp: gp, grade: grade
+            total: total, percentage: total, gp: gp, grade: grade, isDummy: true
           });
         });
       }
     });
     examMarks.push(...newExamMarks);
 
-    renderAll();
-    alert('Dummy data loaded! 10 Departments, 40 Courses, 50 Faculty, 40 Students, and full 8-semester results generated. Syncing to cloud in the background...');
+    // Fee records — Admission Fee (mostly Paid) + a Semester Fee record for each completed semester so far
+    const newFeeRecords = [];
+    newAdmissions.forEach(a => {
+      const admissionPaid = Math.random() > 0.15; // ~85% already paid their admission fee
+      newFeeRecords.push({
+        id: newId(), student: a.name, type: 'Admission Fee', semester: '-',
+        amount: getFeeTypeAmount('Admission Fee') || 8500, dueDate: a.session.split('-')[0] + '-09-01',
+        status: admissionPaid ? 'Paid' : 'Unpaid', reason: admissionPaid ? '' : 'Financial hardship — will pay next month',
+        isDummy: true
+      });
+      for (let sem = 1; sem < a.currentSemester; sem++) {
+        const paid = Math.random() > 0.2; // ~80% paid for past semesters
+        newFeeRecords.push({
+          id: newId(), student: a.name, type: 'Semester Fee', semester: sem,
+          amount: getFeeTypeAmount('Semester Fee') || 3500, dueDate: a.session.split('-')[0] + '-09-01',
+          status: paid ? 'Paid' : 'Unpaid', reason: paid ? '' : 'Fee Mauf (waived)',
+          isDummy: true
+        });
+      }
+    });
+    feeRecords.push(...newFeeRecords);
 
-    // Bulk-insert to Supabase in the background (large batch, so this can take a few seconds)
+    renderAll();
+    alert('Dummy data loaded! 10 Departments, 40 Courses, 50 Faculty, 40 Students, full 8-semester results, and fee records generated. Syncing to cloud in the background...');
+
+    // Bulk-insert to Supabase in the background (large batch, so this can take a few seconds).
+    // NOTE: requires an `is_dummy` boolean column on each of these tables — see setup instructions.
     if (cloudEnabled) {
       await Promise.all([
-        db.from('departments').insert(newDepartments),
-        db.from('faculty').insert(newFaculty),
-        db.from('courses').insert(newCourses),
+        db.from('departments').insert(newDepartments.map(d => ({ ...d, is_dummy: true }))),
+        db.from('faculty').insert(newFaculty.map(f => ({ ...f, is_dummy: true }))),
+        db.from('courses').insert(newCourses.map(c => ({ ...c, is_dummy: true }))),
         db.from('admissions').insert(newAdmissions.map(a => ({
           id: a.id, roll_no: a.rollNo, name: a.name, father: a.father, cnic: a.cnic,
-          phone: a.phone, program: a.program, session: a.session, current_semester: a.currentSemester
+          phone: a.phone, program: a.program, session: a.session, current_semester: a.currentSemester, is_dummy: true
         })))
       ]);
-      await db.from('exam_marks').insert(newExamMarks);
+      await db.from('exam_marks').insert(newExamMarks.map(m => ({ ...m, is_dummy: true })));
+      await db.from('fee_records').insert(newFeeRecords.map(f => ({
+        id: f.id, student: f.student, type: f.type, semester: f.semester.toString(),
+        amount: f.amount, due_date: f.dueDate, status: f.status, reason: f.reason, is_dummy: true
+      })));
       console.log('Dummy data synced to Supabase.');
     }
+  }
+
+  // Removes ONLY the records tagged isDummy — real/manually-added data is left completely untouched.
+  async function clearDummyData() {
+    if (!guardWrite('settings', 'Clear dummy data')) return;
+    if (!confirm('This will permanently delete ONLY the dummy/demo records generated earlier. Your real data will NOT be touched. Continue?')) return;
+
+    departments = departments.filter(d => !d.isDummy);
+    faculty = faculty.filter(f => !f.isDummy);
+    courses = courses.filter(c => !c.isDummy);
+    admissions = admissions.filter(a => !a.isDummy);
+    examMarks = examMarks.filter(m => !m.isDummy);
+    feeRecords = feeRecords.filter(f => !f.isDummy);
+
+    renderAll();
+    alert('Dummy data cleared! Real data was left untouched.');
+
+    if (cloudEnabled) {
+      await Promise.all([
+        db.from('departments').delete().eq('is_dummy', true),
+        db.from('faculty').delete().eq('is_dummy', true),
+        db.from('courses').delete().eq('is_dummy', true),
+        db.from('admissions').delete().eq('is_dummy', true),
+        db.from('exam_marks').delete().eq('is_dummy', true),
+        db.from('fee_records').delete().eq('is_dummy', true)
+      ]);
+      console.log('Dummy data removed from Supabase.');
+    }
+  }
+
+  // ===== BACKUP & RESTORE =====
+  function backupAllData() {
+    if (!guardWrite('settings', 'Backup all data')) return;
+    const backup = {
+      version: 1, exportedAt: new Date().toISOString(),
+      admissions, faculty, departments, courses, examMarks, timetable, datesheet, feeRecords, challans,
+      feeTypesConfig, challanSettings, transcriptSettings, guestSettings, feeSettings, profileCards
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'cms-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function restoreDataFromBackup(event) {
+    if (!guardWrite('settings', 'Restore data from backup')) { event.target.value = ''; return; }
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      let backup;
+      try { backup = JSON.parse(e.target.result); }
+      catch (err) { alert('Invalid backup file — could not parse JSON.'); event.target.value = ''; return; }
+
+      if (!confirm('This will REPLACE all current data (local AND cloud) with the contents of this backup file. Continue?')) { event.target.value = ''; return; }
+
+      admissions = backup.admissions || [];
+      faculty = backup.faculty || [];
+      departments = backup.departments || [];
+      courses = backup.courses || [];
+      examMarks = backup.examMarks || [];
+      timetable = backup.timetable || [];
+      datesheet = backup.datesheet || [];
+      feeRecords = backup.feeRecords || [];
+      challans = backup.challans || [];
+      if (backup.feeTypesConfig) feeTypesConfig = backup.feeTypesConfig;
+      if (backup.challanSettings) challanSettings = backup.challanSettings;
+      if (backup.transcriptSettings) transcriptSettings = backup.transcriptSettings;
+      if (backup.guestSettings) guestSettings = backup.guestSettings;
+      if (backup.feeSettings) feeSettings = backup.feeSettings;
+      if (backup.profileCards) profileCards = backup.profileCards;
+
+      renderAll();
+      applyAccessControl();
+      alert('Data restored locally! Syncing to cloud in the background...');
+
+      if (cloudEnabled) {
+        // Wipe existing cloud rows, then re-insert everything from the backup
+        await Promise.all([
+          sbDeleteAll('admissions'), sbDeleteAll('faculty'), sbDeleteAll('departments'), sbDeleteAll('courses'),
+          sbDeleteAll('exam_marks'), sbDeleteAll('timetable'), sbDeleteAll('datesheet'), sbDeleteAll('fee_records'), sbDeleteAll('challans')
+        ]);
+        if (departments.length) await db.from('departments').insert(departments);
+        if (faculty.length) await db.from('faculty').insert(faculty);
+        if (courses.length) await db.from('courses').insert(courses);
+        if (admissions.length) await db.from('admissions').insert(admissions.map(a => ({
+          id: a.id, roll_no: a.rollNo, name: a.name, father: a.father, cnic: a.cnic,
+          phone: a.phone, program: a.program, session: a.session, current_semester: a.currentSemester, is_dummy: !!a.isDummy
+        })));
+        if (examMarks.length) await db.from('exam_marks').insert(examMarks);
+        if (timetable.length) await db.from('timetable').insert(timetable);
+        if (datesheet.length) await db.from('datesheet').insert(datesheet);
+        if (feeRecords.length) await db.from('fee_records').insert(feeRecords.map(f => ({
+          id: f.id, student: f.student, type: f.type, semester: f.semester.toString(),
+          amount: f.amount, due_date: f.dueDate, status: f.status, reason: f.reason || '', is_dummy: !!f.isDummy
+        })));
+        if (challans.length) await db.from('challans').insert(challans.map(c => ({
+          id: c.id, challan_no: c.challanNo, student_name: c.studentName, father_name: c.fatherName,
+          roll_no: c.rollNo, cnic: c.cnic, contact: c.contact, fee_type: c.feeType, semester: c.semester,
+          amount: c.amount, due_date: c.dueDate, purpose: c.purpose, status: c.status
+        })));
+        sbUpdate('app_settings', 'main', {
+          fee_types_config: JSON.stringify(feeTypesConfig), challan_settings: JSON.stringify(challanSettings),
+          transcript_settings: JSON.stringify(transcriptSettings), guest_enabled: guestSettings.enabled,
+          guest_pages: JSON.stringify(guestSettings.pages), admission_fee: feeSettings.admissionFee,
+          semester_fee: feeSettings.semesterFee, fee_locked: feeSettings.locked
+        });
+        console.log('Restore synced to Supabase.');
+      }
+      event.target.value = '';
+    };
+    reader.readAsText(file);
   }
 
   // Delete every row from a Supabase table (id is never null, so this clears the whole table)
@@ -3900,17 +4140,17 @@
       admissions = admissionsData.map(a => ({
         id: a.id, rollNo: a.roll_no, name: a.name, father: a.father, cnic: a.cnic,
         phone: a.phone, program: a.program, session: a.session, currentSemester: a.current_semester,
-        status: a.student_status || 'Active'
+        status: a.student_status || 'Active', isDummy: !!a.is_dummy
       }));
-      faculty = facultyData;
-      departments = departmentsData;
-      courses = coursesData.map(c => ({ ...c, credit: parseFloat(c.credit), semester: parseInt(c.semester) }));
+      faculty = facultyData.map(f => ({ ...f, isDummy: !!f.is_dummy }));
+      departments = departmentsData.map(d => ({ ...d, isDummy: !!d.is_dummy }));
+      courses = coursesData.map(c => ({ ...c, credit: parseFloat(c.credit), semester: parseInt(c.semester), isDummy: !!c.is_dummy }));
       examMarks = examMarksData.map(m => ({ ...m, semester: parseInt(m.semester), credit: parseFloat(m.credit),
-        total: parseFloat(m.total), percentage: parseFloat(m.percentage), gp: parseFloat(m.gp) }));
+        total: parseFloat(m.total), percentage: parseFloat(m.percentage), gp: parseFloat(m.gp), isDummy: !!m.is_dummy }));
       timetable = timetableData.map(t => ({ ...t, semester: parseInt(t.semester) }));
       datesheet = datesheetData.map(d => ({ ...d, semester: parseInt(d.semester) }));
       feeRecords = feeData.map(f => ({ id: f.id, student: f.student, type: f.type, semester: f.semester,
-        amount: parseFloat(f.amount), dueDate: f.due_date, status: f.status, reason: f.reason || '' }));
+        amount: parseFloat(f.amount), dueDate: f.due_date, status: f.status, reason: f.reason || '', isDummy: !!f.is_dummy }));
       challans = challansData.map(c => ({ id: c.id, challanNo: c.challan_no, studentName: c.student_name,
         fatherName: c.father_name, rollNo: c.roll_no, cnic: c.cnic, contact: c.contact, feeType: c.fee_type,
         semester: c.semester, amount: parseFloat(c.amount), dueDate: c.due_date, purpose: c.purpose,
