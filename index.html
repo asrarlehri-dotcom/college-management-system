@@ -1079,25 +1079,26 @@
 
         <div class="panel">
           <h3>🏦 Bank / Challan Settings</h3>
-          <p style="font-size:13px; color:#9ca3af; margin-bottom:10px;">Ye details "Generate Challan" par print hone waalay bank deposit slip par apply hoti hain.</p>
+          <p style="font-size:13px; color:#9ca3af; margin-bottom:10px;" id="chSettingsLockNote">Ye details "Generate Challan" par print hone waalay bank deposit slip par apply hoti hain. Set kar ke lock kar dein taake galti se change na ho.</p>
           <div class="form-grid">
-            <div class="form-group"><label>Bank Name</label><input type="text" id="chSettingBankName" placeholder="e.g. Habib Bank Limited (HBL)"></div>
-            <div class="form-group"><label>Branch Code</label><input type="text" id="chSettingBranchCode" placeholder="e.g. 0873"></div>
-            <div class="form-group"><label>Account No</label><input type="text" id="chSettingAccountNo" placeholder="e.g. 08730001324203"></div>
-            <div class="form-group"><label>Account Title</label><input type="text" id="chSettingAccountTitle" placeholder="e.g. Fee Collection Account"></div>
-            <div class="form-group"><label>Challan No. Prefix</label><input type="text" id="chSettingNoPrefix" placeholder="e.g. CH-"></div>
-            <div class="form-group"><label>Next Challan No.</label><input type="number" id="chSettingNextNo" min="1"></div>
-            <div class="form-group"><label>Default Tel No (shown on challan)</label><input type="text" id="chSettingTelNo" placeholder="e.g. 03003585492"></div>
+            <div class="form-group"><label>Bank Name</label><input type="text" id="chSettingBankName" class="chLockable" placeholder="e.g. Habib Bank Limited (HBL)"></div>
+            <div class="form-group"><label>Branch Code</label><input type="text" id="chSettingBranchCode" class="chLockable" placeholder="e.g. 0873"></div>
+            <div class="form-group"><label>Account No</label><input type="text" id="chSettingAccountNo" class="chLockable" placeholder="e.g. 08730001324203"></div>
+            <div class="form-group"><label>Account Title</label><input type="text" id="chSettingAccountTitle" class="chLockable" placeholder="e.g. Fee Collection Account"></div>
+            <div class="form-group"><label>Challan No. Prefix</label><input type="text" id="chSettingNoPrefix" class="chLockable" placeholder="e.g. CH-"></div>
+            <div class="form-group"><label>Next Challan No.</label><input type="number" id="chSettingNextNo" class="chLockable" min="1"></div>
+            <div class="form-group"><label>Default Tel No (shown on challan)</label><input type="text" id="chSettingTelNo" class="chLockable" placeholder="e.g. 03003585492"></div>
           </div>
           <div style="display:flex; flex-wrap:wrap; gap:18px; margin:12px 0;">
             <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:#374151;">
-              <input type="checkbox" id="chSettingShowLogo" style="width:16px; height:16px;"> Show College Logo on Challan
+              <input type="checkbox" id="chSettingShowLogo" class="chLockable" style="width:16px; height:16px;"> Show College Logo on Challan
             </label>
             <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:#374151;">
-              <input type="checkbox" id="chSettingShowQr" style="width:16px; height:16px;"> Show QR Code on Challan
+              <input type="checkbox" id="chSettingShowQr" class="chLockable" style="width:16px; height:16px;"> Show QR Code on Challan
             </label>
           </div>
-          <button class="btn" onclick="saveChallanSettings()">💾 Save Bank / Challan Settings</button>
+          <button class="btn" id="chSettingsLockBtn" onclick="saveChallanSettings()">🔒 Save &amp; Lock</button>
+          <button class="btn btn-outline" id="chSettingsUnlockBtn" style="display:none;" onclick="unlockChallanSettings()">🔓 Unlock to Edit</button>
         </div>
 
         <div class="panel">
@@ -1289,7 +1290,8 @@
     nextNo: 100001,
     telNo: '',
     showLogo: true,
-    showQr: true
+    showQr: true,
+    locked: false
   };
 
   // ===== TRANSCRIPT SETTINGS =====
@@ -1479,6 +1481,12 @@
     chSettingTelNo.value = challanSettings.telNo;
     chSettingShowLogo.checked = challanSettings.showLogo;
     chSettingShowQr.checked = challanSettings.showQr;
+    document.querySelectorAll('.chLockable').forEach(el => el.disabled = !!challanSettings.locked);
+    chSettingsLockBtn.style.display = challanSettings.locked ? 'none' : 'inline-block';
+    chSettingsUnlockBtn.style.display = challanSettings.locked ? 'inline-block' : 'none';
+    chSettingsLockNote.innerText = challanSettings.locked
+      ? '🔒 Locked — inputs are read-only. Click "Unlock to Edit" to make changes.'
+      : 'Ye details "Generate Challan" par print hone waalay bank deposit slip par apply hoti hain. Set kar ke lock kar dein taake galti se change na ho.';
   }
   function saveChallanSettings() {
     if (!guardWrite('settings', 'Bank/Challan settings save')) return;
@@ -1491,10 +1499,19 @@
       nextNo: parseInt(chSettingNextNo.value) || 1,
       telNo: chSettingTelNo.value.trim(),
       showLogo: chSettingShowLogo.checked,
-      showQr: chSettingShowQr.checked
+      showQr: chSettingShowQr.checked,
+      locked: true
     };
+    renderChallanSettings();
     sbUpdate('app_settings', 'main', { challan_settings: JSON.stringify(challanSettings) });
-    alert('Bank / Challan Settings saved!');
+    alert('Bank / Challan Settings saved and locked!');
+  }
+  function unlockChallanSettings() {
+    if (!guardWrite('settings', 'Bank/Challan settings unlock')) return;
+    if (!confirm('Unlock Bank / Challan settings for editing?')) return;
+    challanSettings.locked = false;
+    renderChallanSettings();
+    sbUpdate('app_settings', 'main', { challan_settings: JSON.stringify(challanSettings) });
   }
 
   // ===== TRANSCRIPT SETTINGS (Settings page) =====
@@ -2422,6 +2439,8 @@
     // Auto-fill the amount from the locked Fee Structure (Settings → Fee Types & Amounts) — user can still override
     const configuredAmount = getFeeTypeAmount(chFeeType.value);
     if (configuredAmount) chAmount.value = configuredAmount;
+    // Auto-fill Purpose to match the selected Fee Type (user can still edit/override before generating)
+    if (chFeeType.value) chPurpose.value = chFeeType.value;
   }
 
   function populateChallanStudentDropdown() {
