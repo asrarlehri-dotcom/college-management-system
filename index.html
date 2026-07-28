@@ -148,6 +148,7 @@
     <div class="menu-item" onclick="showPage('fee', this)">💰 Fee</div>
     <div class="menu-item" onclick="showPage('students', this)">🎓 Students</div>
     <div class="menu-item" onclick="showPage('faculty', this)">👨‍🏫 Faculty</div>
+    <div class="menu-item" onclick="showPage('programs', this)">🎓 Programs</div>
     <div class="menu-item" onclick="showPage('departments', this)">🏢 Departments</div>
     <div class="menu-item" onclick="showPage('courses', this)">📚 Courses</div>
     <div class="menu-item" onclick="showPage('attendance', this)">🗓 Attendance</div>
@@ -537,6 +538,49 @@
           <table>
             <thead><tr><th>Name</th><th>Designation</th><th>Department</th><th>Contact</th><th>Email</th><th>Action</th></tr></thead>
             <tbody id="facultyTable"><tr class="empty-row"><td colspan="6">No faculty yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PROGRAMS -->
+      <div id="programs" class="page">
+        <h1>Programs</h1>
+        <p class="subtitle">Manage academic programs (e.g. BS Computer Science) — used across Admission, Students, Fee, Challan and Reports</p>
+        <div class="panel">
+          <h3 id="programFormTitle">Add Program</h3>
+          <form id="programForm">
+            <input type="hidden" id="programEditIndex" value="">
+            <div class="form-grid">
+              <div class="form-group"><label>Program Name</label><input type="text" id="programName" placeholder="e.g. BS Computer Science" required></div>
+              <div class="form-group"><label>Roll No Abbreviation</label><input type="text" id="programCode" placeholder="e.g. CS" required></div>
+              <div class="form-group"><label>Duration (Semesters)</label>
+                <select id="programDuration">
+                  <option value="8" selected>8 Semesters</option>
+                  <option value="6">6 Semesters</option>
+                  <option value="4">4 Semesters</option>
+                  <option value="2">2 Semesters</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Department</label><input type="text" id="programDept" placeholder="e.g. Computer Science"></div>
+            </div>
+            <div class="btn-row">
+              <button type="submit" class="btn" id="programSubmitBtn">➕ Add Program</button>
+              <button type="button" class="btn btn-outline" id="programCancelEditBtn" style="display:none;" onclick="cancelEditProgram()">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3>All Programs</h3>
+            <div class="btn-row">
+              <button class="btn btn-outline btn-sm" onclick="exportCSV(programs, 'programs.csv')">⬇ Export CSV</button>
+              <button class="btn btn-outline btn-sm" onclick="exportPDF(programs, 'Programs List')">🖨 Export PDF</button>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>Program Name</th><th>Abbreviation</th><th>Duration</th><th>Department</th><th>Action</th></tr></thead>
+            <tbody id="programsTable"><tr class="empty-row"><td colspan="5">No programs yet.</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1344,6 +1388,7 @@
     { id: 'fee',         label: 'Fee' },
     { id: 'students',    label: 'Students' },
     { id: 'faculty',     label: 'Faculty' },
+    { id: 'programs',    label: 'Programs' },
     { id: 'departments', label: 'Departments' },
     { id: 'courses',     label: 'Courses' },
     { id: 'attendance',  label: 'Attendance' },
@@ -1364,10 +1409,10 @@
     'Admin': fullPerms(),
     'Principal': fullPerms(),
     'Controller of Examination': presetPerms(['exams', 'addresult', 'merit', 'reports', 'datesheet', 'challan']),
-    'BS Coordinator': presetPerms(['admission', 'students', 'courses', 'timetable', 'reports', 'challan']),
+    'BS Coordinator': presetPerms(['admission', 'students', 'courses', 'programs', 'timetable', 'reports', 'challan']),
     'Examination Cell': presetPerms(['exams', 'addresult', 'merit', 'datesheet', 'challan']),
     'Faculty Member': presetPerms(['attendance', 'exams', 'timetable', 'datesheet']),
-    'Admission Branch': presetPerms(['admission', 'students', 'reports', 'challan']),
+    'Admission Branch': presetPerms(['admission', 'students', 'programs', 'reports', 'challan']),
     'Fee Branch': presetPerms(['fee', 'reports', 'challan']),
     'Attendance Branch': presetPerms(['attendance', 'timetable']),
     'Result Branch': presetPerms(['exams', 'addresult', 'merit', 'datesheet'])
@@ -1475,7 +1520,7 @@
 
   // Show/hide sidebar menu items based on current permissions, and update the login/logout box.
   function applyAccessControl() {
-    const gated = ['challan','admission','fee','students','faculty','departments','courses','attendance','exams','addresult','timetable','datesheet','merit','reports','users','settings'];
+    const gated = ['challan','admission','fee','students','faculty','programs','departments','courses','attendance','exams','addresult','timetable','datesheet','merit','reports','users','settings'];
     gated.forEach(id => {
       const mi = menuItemFor(id);
       if (mi) mi.style.display = canView(id) ? 'flex' : 'none';
@@ -1697,6 +1742,7 @@
     if (id === 'addresult') populateAddResultCourses();
     if (id === 'challan') { populateChallanStudentDropdown(); populateChallanFeeTypeDropdown(); renderChallans(); }
     if (id === 'users') renderPermissionEditor(userRole.value, null);
+    if (id === 'programs') renderPrograms();
   }
 
   function populateFeeDropdown() {
@@ -1923,7 +1969,8 @@
   // ===== ADMISSION =====
 
   // Program name -> short code used in Roll No (e.g. BS Computer Science -> CS)
-  const programAbbrev = {
+  // Rebuilt automatically from the `programs` array whenever it changes — see refreshProgramOptions().
+  let programAbbrev = {
     'BS Computer Science': 'CS',
     'BS Mathematics': 'Math',
     'BS Physics': 'Phy',
@@ -2079,8 +2126,102 @@
     renderAll();
   }
 
-  const PROGRAM_OPTIONS = 'BS Computer Science|BS Mathematics|BS Physics|BS Chemistry|BS English';
+  let PROGRAM_OPTIONS = 'BS Computer Science|BS Mathematics|BS Physics|BS Chemistry|BS English';
   const SESSION_OPTIONS = '2024-2028|2025-2029|2026-2030';
+
+  // ===== PROGRAMS =====
+  let programs = [
+    { id: 'prog-cs', name: 'BS Computer Science', code: 'CS', duration: 8, department: 'Computer Science' },
+    { id: 'prog-math', name: 'BS Mathematics', code: 'Math', duration: 8, department: 'Mathematics' },
+    { id: 'prog-phy', name: 'BS Physics', code: 'Phy', duration: 8, department: 'Physics' },
+    { id: 'prog-chem', name: 'BS Chemistry', code: 'Chem', duration: 8, department: 'Chemistry' },
+    { id: 'prog-eng', name: 'BS English', code: 'Eng', duration: 8, department: 'English' }
+  ];
+
+  // Rebuilds PROGRAM_OPTIONS + programAbbrev from the current `programs` array, and refreshes
+  // every dropdown across the app that lists programs (admission form, students, fee, challan, reports).
+  function refreshProgramOptions() {
+    PROGRAM_OPTIONS = programs.map(p => p.name).join('|');
+    programAbbrev = {};
+    programs.forEach(p => { programAbbrev[p.name] = p.code; });
+
+    if (document.getElementById('program')) {
+      const current = program.value;
+      program.innerHTML = '<option value="">-- select --</option>' + programs.map(p => `<option ${p.name === current ? 'selected' : ''}>${p.name}</option>`).join('');
+    }
+  }
+
+  function renderPrograms() {
+    programsTable.innerHTML = programs.length ? programs.map((p, i) => `
+      <tr>
+        <td>${p.name}</td>
+        <td>${p.code}</td>
+        <td>${p.duration} Semesters</td>
+        <td>${p.department || '-'}</td>
+        <td><div class="btn-row">
+          <button class="btn btn-outline btn-sm" onclick="editProgram(${i})">✏️ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteProgram(${i})">Delete</button>
+        </div></td>
+      </tr>
+    `).join('') : '<tr class="empty-row"><td colspan="5">No programs yet.</td></tr>';
+  }
+
+  document.getElementById('programForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (!guardWrite('programs', 'Program add/edit')) return;
+    const editIdx = programEditIndex.value !== '' ? parseInt(programEditIndex.value) : null;
+    const record = {
+      id: editIdx !== null ? programs[editIdx].id : newId(),
+      name: programName.value.trim(), code: programCode.value.trim(),
+      duration: parseInt(programDuration.value), department: programDept.value.trim()
+    };
+    if (editIdx !== null) {
+      programs[editIdx] = record;
+      sbUpdate('programs', record.id, record);
+    } else {
+      programs.push(record);
+      sbInsert('programs', record);
+    }
+    refreshProgramOptions();
+    cancelEditProgram();
+    renderPrograms();
+  });
+
+  function editProgram(i) {
+    if (!guardWrite('programs', 'Program edit')) return;
+    const p = programs[i];
+    if (!p) return;
+    programEditIndex.value = i;
+    programName.value = p.name;
+    programCode.value = p.code;
+    programDuration.value = p.duration;
+    programDept.value = p.department || '';
+    programFormTitle.innerText = 'Edit Program';
+    programSubmitBtn.innerText = '💾 Update Program';
+    programCancelEditBtn.style.display = 'inline-block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelEditProgram() {
+    programEditIndex.value = '';
+    document.getElementById('programForm').reset();
+    programDuration.value = '8';
+    programFormTitle.innerText = 'Add Program';
+    programSubmitBtn.innerText = '➕ Add Program';
+    programCancelEditBtn.style.display = 'none';
+  }
+
+  function deleteProgram(i) {
+    if (!guardWrite('programs', 'Program delete')) return;
+    const record = programs[i];
+    if (admissions.some(a => a.program === record.name)) {
+      if (!confirm('Some students are already admitted under "' + record.name + '". Deleting it will NOT remove those students, but it will no longer appear in dropdowns. Continue?')) return;
+    }
+    programs.splice(i, 1);
+    if (record) sbDelete('programs', record.id);
+    refreshProgramOptions();
+    renderPrograms();
+  }
 
   function renderAdmissions() {
 
@@ -4025,7 +4166,7 @@
     if (!guardWrite('settings', 'Backup all data')) return;
     const backup = {
       version: 1, exportedAt: new Date().toISOString(),
-      admissions, faculty, departments, courses, examMarks, timetable, datesheet, feeRecords, challans,
+      admissions, faculty, departments, courses, programs, examMarks, timetable, datesheet, feeRecords, challans,
       feeTypesConfig, challanSettings, transcriptSettings, guestSettings, feeSettings, profileCards
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -4055,6 +4196,7 @@
       faculty = backup.faculty || [];
       departments = backup.departments || [];
       courses = backup.courses || [];
+      programs = (backup.programs && backup.programs.length) ? backup.programs : programs;
       examMarks = backup.examMarks || [];
       timetable = backup.timetable || [];
       datesheet = backup.datesheet || [];
@@ -4075,11 +4217,13 @@
         // Wipe existing cloud rows, then re-insert everything from the backup
         await Promise.all([
           sbDeleteAll('admissions'), sbDeleteAll('faculty'), sbDeleteAll('departments'), sbDeleteAll('courses'),
-          sbDeleteAll('exam_marks'), sbDeleteAll('timetable'), sbDeleteAll('datesheet'), sbDeleteAll('fee_records'), sbDeleteAll('challans')
+          sbDeleteAll('exam_marks'), sbDeleteAll('timetable'), sbDeleteAll('datesheet'), sbDeleteAll('fee_records'),
+          sbDeleteAll('challans'), sbDeleteAll('programs')
         ]);
         if (departments.length) await db.from('departments').insert(departments);
         if (faculty.length) await db.from('faculty').insert(faculty);
         if (courses.length) await db.from('courses').insert(courses);
+        if (programs.length) await db.from('programs').insert(programs);
         if (admissions.length) await db.from('admissions').insert(admissions.map(a => ({
           id: a.id, roll_no: a.rollNo, name: a.name, father: a.father, cnic: a.cnic,
           phone: a.phone, program: a.program, session: a.session, current_semester: a.currentSemester, is_dummy: !!a.isDummy, frozen: !!a.frozen
@@ -4386,6 +4530,8 @@
     renderDashboardStats();
     renderProfileCards();
     renderChallans();
+    refreshProgramOptions();
+    renderPrograms();
   }
 
   // ===== INITIAL LOAD FROM SUPABASE =====
@@ -4404,7 +4550,7 @@
     try {
       const [
         admissionsData, facultyData, departmentsData, coursesData,
-        examMarksData, timetableData, datesheetData, feeData, usersData, settingsData, challansData
+        examMarksData, timetableData, datesheetData, feeData, usersData, settingsData, challansData, programsData
       ] = await Promise.all([
         sbFetchAll('admissions'),
         sbFetchAll('faculty'),
@@ -4416,7 +4562,8 @@
         sbFetchAll('fee_records'),
         sbFetchAll('users'),
         sbFetchAll('app_settings'),
-        sbFetchAll('challans')
+        sbFetchAll('challans'),
+        sbFetchAll('programs')
       ]);
 
       admissions = admissionsData.map(a => ({
@@ -4437,6 +4584,9 @@
         fatherName: c.father_name, rollNo: c.roll_no, cnic: c.cnic, contact: c.contact, feeType: c.fee_type,
         semester: c.semester, amount: parseFloat(c.amount), dueDate: c.due_date, purpose: c.purpose,
         status: c.status || 'Pending' }));
+      if (programsData.length) {
+        programs = programsData.map(p => ({ id: p.id, name: p.name, code: p.code, duration: parseInt(p.duration) || 8, department: p.department || '' }));
+      }
       if (usersData.length) {
         const seedUsers = users; // the built-in defaults (with passwords/permissions) before we overwrite
         users = usersData.map(u => {
