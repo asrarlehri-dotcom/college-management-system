@@ -24,7 +24,10 @@
   .content .subtitle { color:#9ca3af; font-size:13px; margin-bottom:25px; }
 
   .stats { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:15px; margin-bottom:30px; }
-  .stat-card { background:#fff; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
+  .stat-card { background:#fff; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05); border-left:4px solid transparent; transition:transform .12s ease, box-shadow .12s ease, background .12s ease; }
+  .stat-card-clickable { cursor:pointer; }
+  .stat-card-clickable:hover { transform:translateY(-3px); box-shadow:0 6px 16px rgba(0,0,0,0.12); background:#f8fafc; }
+  body.dark-mode .stat-card-clickable:hover { background:#243244; box-shadow:0 6px 16px rgba(0,0,0,0.5); }
   .stat-card .label { font-size:13px; color:#9ca3af; margin-bottom:8px; }
   .stat-card .value { font-size:26px; font-weight:700; color:#111827; }
 
@@ -203,24 +206,29 @@
         </div>
 
         <div class="stats">
-          <div class="stat-card"><div class="label">Total Students</div><div class="value" id="statTotalStudents">0</div></div>
-          <div class="stat-card"><div class="label">Total Subjects</div><div class="value" id="statTotalSubjects">0</div></div>
-          <div class="stat-card"><div class="label">Total Programs</div><div class="value" id="statTotalPrograms">0</div></div>
-          <div class="stat-card"><div class="label">Total Departments</div><div class="value" id="statTotalDepartments">0</div></div>
-          <div class="stat-card"><div class="label">Total Faculty</div><div class="value" id="statTotalFaculty">0</div></div>
-          <div class="stat-card"><div class="label">Total Enrolled (All)</div><div class="value" id="statEnrolledAll">0</div></div>
-          <div class="stat-card"><div class="label">Total Enrolled (Current)</div><div class="value" id="statEnrolledCurrent">0</div></div>
-          <div class="stat-card"><div class="label">Total Passed Out</div><div class="value" id="statPassedOut">0</div></div>
-          <div class="stat-card"><div class="label">Total Dropout</div><div class="value" id="statDropout">0</div></div>
-          <div class="stat-card"><div class="label">Total Quit Students</div><div class="value" id="statQuit">0</div></div>
-          <div class="stat-card"><div class="label">Pending Results</div><div class="value" id="statPendingResults" style="color:#dc2626;">0</div></div>
-          <div class="stat-card"><div class="label">Fee &amp; Dues</div><div class="value" id="statFeeDues" style="color:#dc2626;">Rs. 0</div></div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#3b82f6;" onclick="goToStudentsFiltered('All')"><div class="label">Total Students</div><div class="value" id="statTotalStudents">0</div></div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#8b5cf6;" onclick="goToModule('courses')"><div class="label">Total Subjects</div><div class="value" id="statTotalSubjects">0</div></div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#6366f1;" onclick="goToModule('admission')"><div class="label">Total Programs</div><div class="value" id="statTotalPrograms">0</div></div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#14b8a6;" onclick="goToModule('departments')"><div class="label">Total Departments</div><div class="value" id="statTotalDepartments">0</div></div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#f59e0b;" onclick="goToModule('faculty')"><div class="label">Total Faculty</div><div class="value" id="statTotalFaculty">0</div></div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#06b6d4;" onclick="goToStudentsFiltered('All')"><div class="label">Total Enrolled (All)</div><div class="value" id="statEnrolledAll">0</div></div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#10b981;" onclick="goToStudentsFiltered('Active')"><div class="label">Total Enrolled (Current)</div><div class="value" id="statEnrolledCurrent">0</div></div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#059669;" onclick="goToStudentsFiltered('Passed Out')"><div class="label">Total Passed Out</div><div class="value" id="statPassedOut">0</div></div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#ef4444;" onclick="goToStudentsFiltered('Dropout')"><div class="label">Total Dropout</div><div class="value" id="statDropout">0</div></div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#f43f5e;" onclick="goToStudentsFiltered('Quit')"><div class="label">Total Quit Students</div><div class="value" id="statQuit">0</div></div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#0ea5e9;" onclick="goToStudentsFrozen()"><div class="label">❄️ Semester Freeze</div><div class="value" id="statFrozen" style="color:#0ea5e9;">0</div></div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#d97706;" onclick="goToModule('addresult')"><div class="label">Pending Results</div><div class="value" id="statPendingResults" style="color:#dc2626;">0</div></div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#dc2626;" onclick="goToModule('fee')"><div class="label">Fee &amp; Dues</div><div class="value" id="statFeeDues" style="color:#dc2626;">Rs. 0</div></div>
         </div>
 
         <div class="panel">
           <h3>Quick Access</h3>
           <div class="btn-row">
+            <button class="btn" onclick="document.querySelector('.menu-item[onclick*=challan]').click()">🧾 Generate Challan</button>
             <button class="btn" onclick="document.querySelector('.menu-item[onclick*=addresult]').click()">📥 Add Result</button>
+            <button class="btn" onclick="document.querySelector('.menu-item[onclick*=exams]').click()">🏅 Award List</button>
+            <button class="btn" onclick="document.querySelector('.menu-item[onclick*=reports]').click()">📄 Print Transcript</button>
+            <button class="btn" onclick="document.querySelector('.menu-item[onclick*=reports]').click()">📰 Print Gazette Result</button>
             <button class="btn" onclick="document.querySelector('.menu-item[onclick*=datesheet]').click()">🗒 Datesheet</button>
             <button class="btn" onclick="document.querySelector('.menu-item[onclick*=timetable]').click()">⏰ Timetable</button>
             <button class="btn" onclick="document.querySelector('.menu-item[onclick*=attendance]').click()">🗓 Attendance</button>
@@ -478,6 +486,14 @@
             <h3>Student List</h3>
             <div class="btn-row">
               <input type="text" class="search-box" id="studentSearch" placeholder="Search by name/program..." oninput="renderStudents()">
+              <select id="studentStatusFilter" onchange="renderStudents()" style="padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px;">
+                <option value="All">All Statuses</option>
+                <option value="Active">Active</option>
+                <option value="Passed Out">Passed Out</option>
+                <option value="Dropout">Dropout</option>
+                <option value="Quit">Quit</option>
+                <option value="Frozen">❄️ Frozen Only</option>
+              </select>
               <button class="btn btn-outline btn-sm" onclick="document.getElementById('studentsImport').click()">⬆ Import CSV</button>
               <input type="file" id="studentsImport" accept=".csv" onchange="importCSV(event, admissions, renderAll, 'admissions', 'students')">
               <button class="btn btn-outline btn-sm" onclick="exportCSV(admissions, 'students.csv')">⬇ Export CSV</button>
@@ -485,8 +501,8 @@
             </div>
           </div>
           <table>
-            <thead><tr><th>Roll No</th><th>Name</th><th>Father</th><th>CNIC</th><th>Phone</th><th>Program</th><th>Session</th><th>Semester</th><th>Action</th></tr></thead>
-            <tbody id="studentsTable"><tr class="empty-row"><td colspan="9">No students yet.</td></tr></tbody>
+            <thead><tr><th>Roll No</th><th>Name</th><th>Father</th><th>CNIC</th><th>Phone</th><th>Program</th><th>Session</th><th>Semester</th><th>Semester Freeze</th><th>Action</th></tr></thead>
+            <tbody id="studentsTable"><tr class="empty-row"><td colspan="10">No students yet.</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -668,6 +684,30 @@
         </div>
 
         <div class="panel">
+          <h3>🏅 Award List (Printable Proforma)</h3>
+          <p style="font-size:12px; color:#9ca3af; margin-bottom:10px;">Ek subject ke liye tamam students ki marks-entry sheet — internal exam record ke liye print karein.</p>
+          <div class="form-grid">
+            <div class="form-group"><label>Session</label>
+              <select id="alSession"><option value="">-- select --</option></select>
+            </div>
+            <div class="form-group"><label>Program</label>
+              <select id="alProgram"><option value="">-- select --</option></select>
+            </div>
+            <div class="form-group"><label>Semester</label>
+              <select id="alSemester" onchange="populateAwardListCourses()">
+                <option value="">-- select --</option>
+                <option>1</option><option>2</option><option>3</option><option>4</option>
+                <option>5</option><option>6</option><option>7</option><option>8</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Course</label>
+              <select id="alCourse"><option value="">-- select semester first --</option></select>
+            </div>
+          </div>
+          <button class="btn" onclick="generateAwardList()">🏅 Generate Award List (Print)</button>
+        </div>
+
+        <div class="panel">
           <div class="panel-head">
             <h3>All Marks Records</h3>
             <button class="btn btn-outline btn-sm" onclick="exportCSV(examMarks, 'marks.csv')">⬇ Export CSV</button>
@@ -762,6 +802,27 @@
             </div>
           </div>
           <button class="btn" onclick="generateTranscript()">📄 Generate Transcript (Print / Save as PDF)</button>
+        </div>
+
+        <div class="panel">
+          <h3>📰 Gazette Result</h3>
+          <p style="font-size:12px; color:#9ca3af; margin-bottom:10px;">Session/Program/Semester ke tamam students ka combined result sheet (jaisa official Result Gazette).</p>
+          <div class="form-grid">
+            <div class="form-group"><label>Session</label>
+              <select id="gzSession"><option value="">-- select --</option></select>
+            </div>
+            <div class="form-group"><label>Program</label>
+              <select id="gzProgram"><option value="">-- select --</option></select>
+            </div>
+            <div class="form-group"><label>Semester</label>
+              <select id="gzSemester">
+                <option value="">-- select --</option>
+                <option>1</option><option>2</option><option>3</option><option>4</option>
+                <option>5</option><option>6</option><option>7</option><option>8</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn" onclick="generateGazetteResult()">📰 Generate Gazette Result (Print)</button>
         </div>
 
         <div class="panel">
@@ -1392,6 +1453,26 @@
     return document.querySelector('.menu-item[onclick*=' + pageId + ']');
   }
 
+  // Dashboard stat-card click → jump to the relevant module page
+  function goToModule(pageId) {
+    const mi = menuItemFor(pageId);
+    if (mi) showPage(pageId, mi);
+  }
+
+  // Dashboard stat-card click → jump to Students page pre-filtered by status (All/Active/Passed Out/Dropout/Quit)
+  function goToStudentsFiltered(status) {
+    const mi = menuItemFor('students');
+    if (!mi) return;
+    showPage('students', mi);
+    studentStatusFilter.value = status;
+    studentSearch.value = '';
+    renderStudents();
+  }
+
+  function goToStudentsFrozen() {
+    goToStudentsFiltered('Frozen');
+  }
+
   // Show/hide sidebar menu items based on current permissions, and update the login/logout box.
   function applyAccessControl() {
     const gated = ['challan','admission','fee','students','faculty','departments','courses','attendance','exams','addresult','timetable','datesheet','merit','reports','users','settings'];
@@ -1636,9 +1717,92 @@
 
   function populateExamDropdowns() {
     markStudent.innerHTML = '<option value="">-- select student --</option>' +
-      admissions.map(a => `<option value="${a.name}" data-program="${a.program}">${a.name}</option>`).join('');
+      admissions.map(a => `<option value="${a.name}" data-program="${a.program}">${a.name}${a.frozen ? ' ❄️ (Frozen)' : ''}</option>`).join('');
     markCourse.innerHTML = '<option value="">-- select course --</option>' +
       courses.map(c => `<option value="${c.name}" data-credit="${c.credit}">${c.name} (${c.code})</option>`).join('');
+    alSession.innerHTML = '<option value="">-- select --</option>' + SESSION_OPTIONS.split('|').map(s => `<option>${s}</option>`).join('');
+    alProgram.innerHTML = '<option value="">-- select --</option>' + PROGRAM_OPTIONS.split('|').map(p => `<option>${p}</option>`).join('');
+  }
+
+  function populateAwardListCourses() {
+    const sem = parseInt(alSemester.value);
+    const semCourses = courses.filter(c => c.semester === sem);
+    alCourse.innerHTML = semCourses.length
+      ? '<option value="">-- select course --</option>' + semCourses.map(c => `<option value="${c.name}">${c.name} (${c.code})</option>`).join('')
+      : '<option value="">-- no courses for this semester --</option>';
+  }
+
+  function generateAwardList() {
+    const session = alSession.value, program = alProgram.value, semester = parseInt(alSemester.value), courseName = alCourse.value;
+    if (!session || !program || !semester || !courseName) { alert('Please select Session, Program, Semester and Course.'); return; }
+
+    const courseObj = courses.find(c => c.name === courseName);
+    const students = admissions.filter(a => a.session === session && a.program === program);
+    if (!students.length) { alert('No students found for this Session + Program.'); return; }
+
+    const collegeName = collegeNameSidebar.innerText;
+    const logoSrc = (collegeLogoImg && collegeLogoImg.src && collegeLogoImg.style.display !== 'none') ? collegeLogoImg.src : '';
+
+    const rows = students.map((a, i) => {
+      const mark = examMarks.find(m => m.student === a.name && m.course === courseName && parseInt(m.semester) === semester);
+      return `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${a.rollNo}</td>
+          <td>${a.name}${a.frozen ? ' ❄️' : ''}</td>
+          <td>${a.father}</td>
+          <td style="width:70px;">${mark ? mark.total : ''}</td>
+          <td style="width:100px;"></td>
+        </tr>
+      `;
+    }).join('');
+
+    const win = window.open('', '_blank');
+    if (!win) { alert('Popup blocked! Please allow popups for this page and try again.'); return; }
+    win.document.write(`
+      <html>
+      <head>
+        <title>Award List - ${courseName}</title>
+        <style>
+          @page { size: A4; margin: 14mm; }
+          * { box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; font-size:12px; color:#111; }
+          .letterhead { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:4px; }
+          .letterhead img { max-width:55px; max-height:55px; }
+          h1 { text-align:center; font-size:16px; margin-bottom:2px; }
+          .title { text-align:center; font-weight:bold; text-decoration:underline; margin:8px 0; font-size:13px; }
+          .info-grid { display:grid; grid-template-columns: 1fr 1fr; gap:3px 30px; font-size:11.5px; margin-bottom:12px; }
+          table { width:100%; border-collapse:collapse; font-size:11px; }
+          th, td { border:1px solid #999; padding:4px 6px; }
+          th { background:#f3f4f6; }
+          .sign-row { display:flex; justify-content:space-between; margin-top:40px; font-size:11px; }
+        </style>
+      </head>
+      <body>
+        <div class="letterhead">
+          ${logoSrc ? `<img src="${logoSrc}">` : ''}
+          <h1>${collegeName}</h1>
+        </div>
+        <div class="title">AWARD LIST</div>
+        <div class="info-grid">
+          <div><b>Program:</b> ${program}</div>
+          <div><b>Session:</b> ${session}</div>
+          <div><b>Semester:</b> ${semester}</div>
+          <div><b>Course:</b> ${courseName} (${courseObj ? courseObj.code : ''})</div>
+        </div>
+        <table>
+          <thead><tr><th>Sr#</th><th>Roll No</th><th>Name</th><th>Father's Name</th><th>Marks Obtained</th><th>Signature</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="sign-row">
+          <div>_______________________<br>Course Teacher</div>
+          <div>_______________________<br>Controller of Examinations</div>
+        </div>
+        <script>window.onload = () => setTimeout(() => window.print(), 300);<\/script>
+      </body>
+      </html>
+    `);
+    win.document.close();
   }
 
   function autoFillProgram() {} // program auto-linked via data attribute, no UI field needed currently
@@ -1659,6 +1823,101 @@
       admissions.map(a => `<option value="${a.name}">${a.name}</option>`).join('');
     transcriptStudent.innerHTML = '<option value="">-- select student --</option>' +
       admissions.map(a => `<option value="${a.name}">${a.name}</option>`).join('');
+    gzSession.innerHTML = '<option value="">-- select --</option>' + SESSION_OPTIONS.split('|').map(s => `<option>${s}</option>`).join('');
+    gzProgram.innerHTML = '<option value="">-- select --</option>' + PROGRAM_OPTIONS.split('|').map(p => `<option>${p}</option>`).join('');
+  }
+
+  function generateGazetteResult() {
+    const session = gzSession.value, program = gzProgram.value, semester = parseInt(gzSemester.value);
+    if (!session || !program || !semester) { alert('Please select Session, Program and Semester.'); return; }
+
+    const students = admissions.filter(a => a.session === session && a.program === program);
+    if (!students.length) { alert('No students found for this Session + Program.'); return; }
+
+    const semCourses = courses.filter(c => c.semester === semester);
+    if (!semCourses.length) { alert('No courses found for Semester ' + semester + '.'); return; }
+
+    const collegeName = collegeNameSidebar.innerText;
+    const logoSrc = (collegeLogoImg && collegeLogoImg.src && collegeLogoImg.style.display !== 'none') ? collegeLogoImg.src : '';
+
+    const rows = students.map((a, i) => {
+      let totalObtained = 0, totalMax = 0, totalCH = 0, totalPoints = 0;
+      const courseCells = semCourses.map(c => {
+        const mark = examMarks.find(m => m.student === a.name && m.course === c.name && parseInt(m.semester) === semester);
+        if (mark) {
+          totalObtained += mark.total;
+          totalMax += 100;
+          totalCH += c.credit;
+          totalPoints += mark.gp * c.credit;
+        }
+        return `<td>${mark ? mark.total : '-'}</td>`;
+      }).join('');
+      const pct = totalMax ? ((totalObtained / totalMax) * 100).toFixed(1) : '-';
+      const gpa = totalCH ? (totalPoints / totalCH).toFixed(2) : '-';
+      const resultStatus = totalMax ? (pct >= 40 ? 'Pass' : 'Fail') : 'Pending';
+      return `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${a.rollNo}</td>
+          <td>${a.name}${a.frozen ? ' ❄️' : ''}</td>
+          ${courseCells}
+          <td>${pct}${totalMax ? '%' : ''}</td>
+          <td>${gpa}</td>
+          <td style="color:${resultStatus==='Pass' ? '#059669' : resultStatus==='Fail' ? '#dc2626' : '#9ca3af'}; font-weight:600;">${resultStatus}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const win = window.open('', '_blank');
+    if (!win) { alert('Popup blocked! Please allow popups for this page and try again.'); return; }
+    win.document.write(`
+      <html>
+      <head>
+        <title>Result Gazette - ${program} - Sem ${semester}</title>
+        <style>
+          @page { size: A4 landscape; margin: 12mm; }
+          * { box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; font-size:10.5px; color:#111; }
+          .letterhead { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:4px; }
+          .letterhead img { max-width:50px; max-height:50px; }
+          h1 { text-align:center; font-size:16px; margin-bottom:2px; }
+          .title { text-align:center; font-weight:bold; text-decoration:underline; margin:6px 0; font-size:13px; }
+          .info-grid { display:flex; justify-content:center; gap:30px; font-size:11px; margin-bottom:10px; }
+          table { width:100%; border-collapse:collapse; font-size:9.5px; }
+          th, td { border:1px solid #999; padding:3px 5px; text-align:center; }
+          th { background:#f3f4f6; }
+          td:nth-child(3) { text-align:left; }
+          .sign-row { display:flex; justify-content:space-between; margin-top:35px; font-size:11px; }
+        </style>
+      </head>
+      <body>
+        <div class="letterhead">
+          ${logoSrc ? `<img src="${logoSrc}">` : ''}
+          <h1>${collegeName}</h1>
+        </div>
+        <div class="title">RESULT GAZETTE</div>
+        <div class="info-grid">
+          <div><b>Program:</b> ${program}</div>
+          <div><b>Session:</b> ${session}</div>
+          <div><b>Semester:</b> ${semester}</div>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Sr#</th><th>Roll No</th><th>Name</th>
+            ${semCourses.map(c => `<th>${c.code}<br>${c.name}</th>`).join('')}
+            <th>%</th><th>GPA</th><th>Result</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="sign-row">
+          <div>_______________________<br>BS Coordinator</div>
+          <div>_______________________<br>Controller of Examinations</div>
+        </div>
+        <script>window.onload = () => setTimeout(() => window.print(), 300);<\/script>
+      </body>
+      </html>
+    `);
+    win.document.close();
   }
 
   // ===== ADMISSION =====
@@ -1699,7 +1958,8 @@
       name: stuName.value, father: fatherName.value, cnic: cnic.value,
       phone: phone.value, program: program.value, session: session.value,
       currentSemester: parseInt(currentSemester.value),
-      status: 'Active' // kept locally for Dashboard stats; not sent to Supabase (no matching column needed)
+      status: 'Active', // kept locally for Dashboard stats; not sent to Supabase (no matching column needed)
+      frozen: false
     };
     admissions.push(record);
 
@@ -1708,7 +1968,7 @@
     // via a normal Fee Records entry (a table that's already working correctly).
     const err = await sbInsert('admissions', { id: record.id, roll_no: record.rollNo, name: record.name, father: record.father,
       cnic: record.cnic, phone: record.phone, program: record.program, session: record.session,
-      current_semester: record.currentSemester });
+      current_semester: record.currentSemester, frozen: false });
 
     // Create the matching Admission Fee record (Paid/Unpaid, as selected on the form)
     const feeAmount = (typeof feeSettings !== 'undefined' && feeSettings.admissionFee) ? feeSettings.admissionFee : 0;
@@ -1844,7 +2104,11 @@
 
   function renderStudents() {
     const q = (studentSearch.value || '').toLowerCase();
-    const filtered = admissions.filter(a => a.name.toLowerCase().includes(q) || a.program.toLowerCase().includes(q));
+    const statusFilter = studentStatusFilter.value || 'All';
+    const filtered = admissions.filter(a =>
+      (a.name.toLowerCase().includes(q) || a.program.toLowerCase().includes(q)) &&
+      (statusFilter === 'All' || (statusFilter === 'Frozen' ? !!a.frozen : (a.status || 'Active') === statusFilter))
+    );
     studentsTable.innerHTML = filtered.map(a => {
       const i = admissions.indexOf(a);
       const sem = a.currentSemester || 1;
@@ -1859,10 +2123,25 @@
         <td>${editableSelectCell(a.id, 'program', a.program, PROGRAM_OPTIONS)}</td>
         <td>${editableSelectCell(a.id, 'session', a.session, SESSION_OPTIONS)}</td>
         <td>Semester ${sem}</td>
+        <td>${a.frozen
+          ? `<button class="btn btn-sm" style="background:#0ea5e9;" onclick="toggleFreeze(${i})">❄️ Frozen — Unfreeze</button>`
+          : `<button class="btn btn-outline btn-sm" onclick="toggleFreeze(${i})">🧊 Freeze Semester</button>`}</td>
         <td>${canPromote ? `<button class="btn btn-sm" onclick="promoteStudent(${i})">⬆ Promote</button>` : `<span style="color:#9ca3af; font-size:12px;">Final Semester</span>`}</td>
       </tr>
     `;
-    }).join('') || `<tr class="empty-row"><td colspan="9">No students found.</td></tr>`;
+    }).join('') || `<tr class="empty-row"><td colspan="10">No students found.</td></tr>`;
+  }
+
+  // Freezing a semester marks the student so faculty know not to record new attendance/marks for them
+  // this term (e.g. medical leave, pending case, etc). Shown as a ❄️ badge in Attendance & Exams/Marks too.
+  function toggleFreeze(i) {
+    if (!guardWrite('students', 'Freeze/Unfreeze semester')) return;
+    const a = admissions[i];
+    if (!a) return;
+    a.frozen = !a.frozen;
+    sbUpdate('admissions', a.id, { frozen: a.frozen });
+    renderStudents();
+    renderDashboardStats();
   }
 
   // Promote a student to next semester, and auto-move their newly-due semester fee from "Upcoming" to "Unpaid"
@@ -1977,7 +2256,7 @@
     const key = date + '|' + course;
 
     if (!attendanceRecords[key]) {
-      attendanceRecords[key] = admissions.map(a => ({ name: a.name, program: a.program, status: 'Present' }));
+      attendanceRecords[key] = admissions.map(a => ({ name: a.name, program: a.program, status: 'Present', frozen: !!a.frozen }));
     }
     renderAttendanceSheet(key);
   }
@@ -1986,7 +2265,7 @@
     const records = attendanceRecords[key] || [];
     attendanceTable.innerHTML = records.map((r, i) => `
       <tr>
-        <td>${r.name}</td><td>${r.program}</td>
+        <td>${r.name} ${r.frozen ? '<span style="color:#0ea5e9; font-size:11px;">❄️ Frozen</span>' : ''}</td><td>${r.program}</td>
         <td>
           <button class="att-btn ${r.status==='Present'?'att-present':''}" onclick="setAttendance('${key}', ${i}, 'Present')">Present</button>
           <button class="att-btn ${r.status==='Absent'?'att-absent':''}" onclick="setAttendance('${key}', ${i}, 'Absent')">Absent</button>
@@ -3638,7 +3917,8 @@
         session: session,
         currentSemester: (i % 8) + 1,
         status: 'Active',
-        isDummy: true
+        isDummy: true,
+        frozen: i % 11 === 0 // a few students frozen, for realistic demo data
       });
     }
     admissions.push(...newAdmissions);
@@ -3700,7 +3980,7 @@
         db.from('courses').insert(newCourses.map(c => ({ ...c, is_dummy: true }))),
         db.from('admissions').insert(newAdmissions.map(a => ({
           id: a.id, roll_no: a.rollNo, name: a.name, father: a.father, cnic: a.cnic,
-          phone: a.phone, program: a.program, session: a.session, current_semester: a.currentSemester, is_dummy: true
+          phone: a.phone, program: a.program, session: a.session, current_semester: a.currentSemester, is_dummy: true, frozen: a.frozen
         })))
       ]);
       await db.from('exam_marks').insert(newExamMarks.map(m => ({ ...m, is_dummy: true })));
@@ -3802,7 +4082,7 @@
         if (courses.length) await db.from('courses').insert(courses);
         if (admissions.length) await db.from('admissions').insert(admissions.map(a => ({
           id: a.id, roll_no: a.rollNo, name: a.name, father: a.father, cnic: a.cnic,
-          phone: a.phone, program: a.program, session: a.session, current_semester: a.currentSemester, is_dummy: !!a.isDummy
+          phone: a.phone, program: a.program, session: a.session, current_semester: a.currentSemester, is_dummy: !!a.isDummy, frozen: !!a.frozen
         })));
         if (examMarks.length) await db.from('exam_marks').insert(examMarks);
         if (timetable.length) await db.from('timetable').insert(timetable);
@@ -3866,6 +4146,7 @@
     const passedOut = admissions.filter(a => a.status === 'Passed Out').length;
     const dropout = admissions.filter(a => a.status === 'Dropout').length;
     const quit = admissions.filter(a => a.status === 'Quit').length;
+    const frozenCount = admissions.filter(a => a.frozen).length;
 
     // Pending Results: for each active student, count courses in their current semester that don't have a saved mark yet
     let pendingResults = 0;
@@ -3889,6 +4170,7 @@
     statPassedOut.innerText = passedOut;
     statDropout.innerText = dropout;
     statQuit.innerText = quit;
+    statFrozen.innerText = frozenCount;
     statPendingResults.innerText = pendingResults;
     statFeeDues.innerText = 'Rs. ' + feeDues.toLocaleString();
   }
@@ -4140,7 +4422,7 @@
       admissions = admissionsData.map(a => ({
         id: a.id, rollNo: a.roll_no, name: a.name, father: a.father, cnic: a.cnic,
         phone: a.phone, program: a.program, session: a.session, currentSemester: a.current_semester,
-        status: a.student_status || 'Active', isDummy: !!a.is_dummy
+        status: a.student_status || 'Active', isDummy: !!a.is_dummy, frozen: !!a.frozen
       }));
       faculty = facultyData.map(f => ({ ...f, isDummy: !!f.is_dummy }));
       departments = departmentsData.map(d => ({ ...d, isDummy: !!d.is_dummy }));
