@@ -949,6 +949,8 @@
         <div class="panel">
           <div class="panel-head">
             <h3>Timetable</h3>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('timetableImport').click()">⬆ Import CSV</button>
+            <input type="file" id="timetableImport" accept=".csv" style="display:none;" onchange="importCSV(event, timetable, renderTimetable, 'timetable', 'timetable')">
             <button class="btn btn-outline btn-sm" onclick="exportCSV(timetable, 'timetable.csv')">⬇ Export CSV</button>
             <button class="btn btn-outline btn-sm" onclick="exportPDF(timetable, 'Timetable')">🖨 Export PDF</button>
           </div>
@@ -991,9 +993,31 @@
             <button type="submit" class="btn">➕ Add Entry</button>
           </form>
         </div>
+
+        <div class="panel">
+          <h3>🗓 Generate Datesheet from Timetable</h3>
+          <p style="font-size:12px; color:#9ca3af; margin-bottom:10px;">Us Program/Semester ke Timetable mein jitni courses hain, un sab ke liye exam dates khud-ba-khud ban jayengi (ek din baad ek course) — starting date choose karein, phir neeche table mein Date/Time/Room ko edit bhi kar saktay hain.</p>
+          <div class="form-grid">
+            <div class="form-group"><label>Program</label>
+              <select id="dsGenProgram"><option value="">-- select --</option></select>
+            </div>
+            <div class="form-group"><label>Semester</label>
+              <select id="dsGenSemester">
+                <option value="">-- select --</option>
+                <option>1</option><option>2</option><option>3</option><option>4</option>
+                <option>5</option><option>6</option><option>7</option><option>8</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Start Date</label><input type="date" id="dsGenStartDate"></div>
+            <div class="form-group"><label>Default Time Slot</label><input type="text" id="dsGenTime" placeholder="e.g. 9:00 - 12:00 PM" value="9:00 - 12:00 PM"></div>
+          </div>
+          <button class="btn" onclick="generateDatesheetFromTimetable()">🗓 Generate Datesheet</button>
+        </div>
         <div class="panel">
           <div class="panel-head">
             <h3>Exam Datesheet</h3>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('datesheetImport').click()">⬆ Import CSV</button>
+            <input type="file" id="datesheetImport" accept=".csv" style="display:none;" onchange="importCSV(event, datesheet, renderDatesheet, 'datesheet', 'datesheet')">
             <button class="btn btn-outline btn-sm" onclick="exportCSV(datesheet, 'datesheet.csv')">⬇ Export CSV</button>
             <button class="btn btn-outline btn-sm" onclick="exportPDF(datesheet, 'Datesheet')">🖨 Export PDF</button>
           </div>
@@ -2062,18 +2086,26 @@
   // Program & Session use a dropdown instead of free text, to keep values consistent
   // with the rest of the app (filters elsewhere match these exact strings).
 
-  function editableCell(id, field, value) {
-    return `<span class="edit-cell" data-id="${id}" data-field="${field}" onclick="startEditCell(this)" style="cursor:pointer; border-bottom:1px dashed #c4b5fd;">${value || '-'}</span>`;
+  function editableCell(id, field, value, source) {
+    return `<span class="edit-cell" data-id="${id}" data-field="${field}" data-source="${source || 'admissions'}" onclick="startEditCell(this)" style="cursor:pointer; border-bottom:1px dashed #c4b5fd;">${value || '-'}</span>`;
   }
 
-  function editableSelectCell(id, field, value, optionsCSV) {
-    return `<span class="edit-cell-select" data-id="${id}" data-field="${field}" data-options="${optionsCSV}" onclick="startEditSelect(this)" style="cursor:pointer; border-bottom:1px dashed #c4b5fd;">${value || '-'}</span>`;
+  function editableSelectCell(id, field, value, optionsCSV, source) {
+    return `<span class="edit-cell-select" data-id="${id}" data-field="${field}" data-options="${optionsCSV}" data-source="${source || 'admissions'}" onclick="startEditSelect(this)" style="cursor:pointer; border-bottom:1px dashed #c4b5fd;">${value || '-'}</span>`;
+  }
+
+  // Returns the CURRENT live array for a given source name (never cache this — the arrays get
+  // reassigned wholesale on cloud load, so always look it up fresh).
+  function getEditableSource(source) {
+    if (source === 'datesheet') return datesheet;
+    if (source === 'timetable') return timetable;
+    return admissions;
   }
 
   function startEditCell(el) {
-    const id = el.dataset.id, field = el.dataset.field;
-    const admission = admissions.find(a => a.id === id);
-    const currentVal = admission ? (admission[field] || '') : '';
+    const id = el.dataset.id, field = el.dataset.field, source = el.dataset.source || 'admissions';
+    const record = getEditableSource(source).find(r => r.id === id);
+    const currentVal = record ? (record[field] || '') : '';
 
     const input = document.createElement('input');
     input.type = 'text';
@@ -2084,7 +2116,7 @@
     input.select();
 
     let committed = false;
-    const commit = () => { if (!committed) { committed = true; saveEditCell(id, field, input.value); } };
+    const commit = () => { if (!committed) { committed = true; saveEditCell(source, id, field, input.value); } };
     input.addEventListener('blur', commit);
     input.addEventListener('keydown', (ev) => {
       if (ev.key === 'Enter') input.blur();
@@ -2093,10 +2125,10 @@
   }
 
   function startEditSelect(el) {
-    const id = el.dataset.id, field = el.dataset.field;
+    const id = el.dataset.id, field = el.dataset.field, source = el.dataset.source || 'admissions';
     const options = el.dataset.options.split('|');
-    const admission = admissions.find(a => a.id === id);
-    const currentVal = admission ? (admission[field] || '') : '';
+    const record = getEditableSource(source).find(r => r.id === id);
+    const currentVal = record ? (record[field] || '') : '';
 
     const select = document.createElement('select');
     select.style.cssText = 'padding:4px 6px; border:1px solid #6d28d9; border-radius:4px; font-size:13px;';
@@ -2110,18 +2142,22 @@
     select.focus();
 
     let committed = false;
-    select.addEventListener('change', () => { committed = true; saveEditCell(id, field, select.value); });
+    select.addEventListener('change', () => { committed = true; saveEditCell(source, id, field, select.value); });
     select.addEventListener('blur', () => { if (!committed) renderAll(); });
   }
 
-  function saveEditCell(id, field, newValue) {
-    const admission = admissions.find(a => a.id === id);
-    if (!admission) { renderAll(); return; }
-    admission[field] = newValue.trim();
+  function saveEditCell(source, id, field, newValue) {
+    const record = getEditableSource(source).find(r => r.id === id);
+    if (!record) { renderAll(); return; }
+    record[field] = newValue.trim();
 
-    const dbFieldMap = { rollNo: 'roll_no', name: 'name', father: 'father', cnic: 'cnic', phone: 'phone', program: 'program', session: 'session' };
-    const dbField = dbFieldMap[field] || field;
-    sbUpdate('admissions', id, { [dbField]: admission[field] });
+    if (source === 'admissions') {
+      const dbFieldMap = { rollNo: 'roll_no', name: 'name', father: 'father', cnic: 'cnic', phone: 'phone', program: 'program', session: 'session' };
+      const dbField = dbFieldMap[field] || field;
+      sbUpdate('admissions', id, { [dbField]: record[field] });
+    } else {
+      sbUpdate(source, id, { [field]: record[field] });
+    }
 
     renderAll();
   }
@@ -2140,15 +2176,27 @@
 
   // Rebuilds PROGRAM_OPTIONS + programAbbrev from the current `programs` array, and refreshes
   // every dropdown across the app that lists programs (admission form, students, fee, challan, reports).
+  function populateProgramSelect(elId, allowAllOption) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const current = el.value;
+    const allOpt = allowAllOption ? '<option value="">All programs</option>' : '<option value="">-- select --</option>';
+    el.innerHTML = allOpt + programs.map(p => `<option ${p.name === current ? 'selected' : ''}>${p.name}</option>`).join('');
+  }
+
   function refreshProgramOptions() {
     PROGRAM_OPTIONS = programs.map(p => p.name).join('|');
     programAbbrev = {};
     programs.forEach(p => { programAbbrev[p.name] = p.code; });
 
-    if (document.getElementById('program')) {
-      const current = program.value;
-      program.innerHTML = '<option value="">-- select --</option>' + programs.map(p => `<option ${p.name === current ? 'selected' : ''}>${p.name}</option>`).join('');
-    }
+    populateProgramSelect('program', false);           // Admission form
+    populateProgramSelect('ttProgram', false);         // Timetable form
+    populateProgramSelect('dsProgram', false);         // Datesheet form
+    populateProgramSelect('dsGenProgram', false);      // Datesheet → Generate from Timetable
+    populateProgramSelect('arProgram', false);         // Add Result form
+    populateProgramSelect('feeReportProgram', true);   // Fee → Fee Status Report
+    populateProgramSelect('resProgram', true);         // Merit & Results → Results tab
+    populateProgramSelect('meritProgram', true);       // Merit & Results → Scholarships tab
   }
 
   function renderPrograms() {
@@ -2495,6 +2543,18 @@
       'program': 'program', 'bs program': 'program',
       'session': 'session',
       'currentsemester': 'currentSemester', 'current semester': 'currentSemester', 'semester': 'currentSemester'
+    },
+    timetable: {
+      'day': 'day', 'time': 'time', 'coursename': 'course', 'course name': 'course', 'course': 'course',
+      'faculty': 'faculty', 'facultyname': 'faculty', 'faculty name': 'faculty', 'teacher': 'faculty',
+      'program': 'program', 'bs program': 'program', 'semester': 'semester',
+      'room': 'room', 'venue': 'room', 'roomno': 'room', 'room no': 'room'
+    },
+    datesheet: {
+      'date': 'date', 'examdate': 'date', 'exam date': 'date', 'time': 'time',
+      'coursename': 'course', 'course name': 'course', 'course': 'course',
+      'program': 'program', 'bs program': 'program', 'semester': 'semester',
+      'room': 'room', 'venue': 'room', 'roomno': 'room', 'room no': 'room'
     }
   };
 
@@ -2527,6 +2587,7 @@
 
         // Type-coerce fields that must be numbers, so calculations elsewhere don't break
         if (tableName === 'courses') { obj.credit = parseFloat(obj.credit) || 3; obj.semester = parseInt(obj.semester) || 1; }
+        if (tableName === 'timetable' || tableName === 'datesheet') { obj.semester = parseInt(obj.semester) || 1; }
         if (tableName === 'admissions') {
           obj.currentSemester = parseInt(obj.currentSemester) || 1;
           // Roll No is always auto-generated (matches the same format as the Admission form),
@@ -3369,14 +3430,56 @@
     if (record) sbDelete('datesheet', record.id);
     renderDatesheet();
   }
+  function deleteDatesheetById(id) {
+    if (!guardWrite('datesheet', 'Datesheet delete')) return;
+    const idx = datesheet.findIndex(d => d.id === id);
+    if (idx === -1) return;
+    datesheet.splice(idx, 1);
+    sbDelete('datesheet', id);
+    renderDatesheet();
+  }
+
+  // Builds a datesheet by pulling every course from the Timetable for a given Program+Semester,
+  // then auto-assigning exam dates one day apart starting from the chosen date. Date/Time/Room stay
+  // editable afterwards (inline, in the table below) if you need to shuffle anything.
+  function generateDatesheetFromTimetable() {
+    if (!guardWrite('datesheet', 'Generate datesheet from timetable')) return;
+    const program = dsGenProgram.value, semester = parseInt(dsGenSemester.value), startDate = dsGenStartDate.value;
+    const timeSlot = dsGenTime.value.trim() || '9:00 - 12:00 PM';
+    if (!program || !semester || !startDate) { alert('Please select Program, Semester and a Start Date.'); return; }
+
+    // Unique courses for this Program+Semester in the Timetable (a course may appear more than once
+    // in the weekly schedule, e.g. multiple lecture slots — we only need it once for the exam).
+    const ttEntries = timetable.filter(t => t.program === program && t.semester === semester);
+    const uniqueCourses = [...new Map(ttEntries.map(t => [t.course, t])).values()];
+    if (!uniqueCourses.length) { alert('No Timetable entries found for this Program + Semester. Add the Timetable first.'); return; }
+
+    // Skip courses that already have a datesheet entry for this program+semester (avoid duplicates)
+    const already = new Set(datesheet.filter(d => d.program === program && d.semester === semester).map(d => d.course));
+    const toCreate = uniqueCourses.filter(t => !already.has(t.course));
+    if (!toCreate.length) { alert('Every course for this Program + Semester already has a datesheet entry.'); return; }
+
+    const newEntries = toCreate.map((t, i) => {
+      const examDate = new Date(startDate + 'T00:00:00');
+      examDate.setDate(examDate.getDate() + i); // one exam per day
+      return {
+        id: newId(), date: examDate.toISOString().split('T')[0], time: timeSlot,
+        course: t.course, program: program, semester: semester, room: t.room || ''
+      };
+    });
+
+    datesheet.push(...newEntries);
+    newEntries.forEach(record => sbInsert('datesheet', record));
+    renderDatesheet();
+    alert(newEntries.length + ' datesheet entries generated from the Timetable! You can edit Date/Time/Room directly in the table below.');
+  }
   function renderDatesheet() {
     datesheetTable.innerHTML = datesheet
       .slice()
       .sort((a,b) => new Date(a.date) - new Date(b.date))
       .map((d) => {
-        const i = datesheet.indexOf(d);
-        return `<tr><td>${d.date}</td><td>${d.time}</td><td>${d.course}</td><td>${d.program}</td><td>${d.semester}</td><td>${d.room}</td>
-        <td><button class="btn btn-danger btn-sm" onclick="deleteDatesheet(${i})">Delete</button></td></tr>`;
+        return `<tr><td>${editableCell(d.id, 'date', d.date, 'datesheet')}</td><td>${editableCell(d.id, 'time', d.time, 'datesheet')}</td><td>${d.course}</td><td>${d.program}</td><td>${d.semester}</td><td>${editableCell(d.id, 'room', d.room, 'datesheet')}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteDatesheetById('${d.id}')">Delete</button></td></tr>`;
       }).join('') || `<tr class="empty-row"><td colspan="7">No datesheet entries yet.</td></tr>`;
   }
 
