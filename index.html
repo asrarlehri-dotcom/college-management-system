@@ -31,14 +31,37 @@
   body.dark-mode .mini-bar { background:#334155; }
   body.dark-mode .mini-bar-caption { color:#64748b; }
 
-  /* Dashboard Background Slider */
-  .dashboard-slider { position:relative; width:100%; height:260px; border-radius:12px; overflow:hidden; margin-bottom:22px; background:#e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+  /* Dashboard Hero + Background Slider */
+  .dashboard-hero { position:relative; border-radius:12px; overflow:hidden; margin-bottom:22px; }
+  .dashboard-hero.has-slider { min-height:190px; }
+  .dashboard-slider-bg { position:absolute; inset:0; z-index:0; }
   .dashboard-slider-track { display:flex; width:100%; height:100%; transition:transform .6s ease; }
   .dashboard-slider-slide { flex:0 0 100%; width:100%; height:100%; background-size:cover; background-position:center; }
-  .dashboard-slider-dots { position:absolute; bottom:12px; left:0; right:0; display:flex; justify-content:center; gap:8px; }
+  .dashboard-hero-gradient { position:absolute; inset:0; z-index:1; pointer-events:none;
+    background:linear-gradient(90deg, #f5f6fa 0%, #f5f6fa 32%, rgba(245,246,250,0.82) 50%, rgba(245,246,250,0.25) 72%, rgba(245,246,250,0) 100%); }
+  body.dark-mode .dashboard-hero-gradient { background:linear-gradient(90deg, #0f172a 0%, #0f172a 32%, rgba(15,23,42,0.82) 50%, rgba(15,23,42,0.25) 72%, rgba(15,23,42,0) 100%); }
+  .dashboard-hero-content { position:relative; z-index:2; padding:20px 30px; display:flex; flex-direction:column; gap:10px; }
+  .dashboard-hero.has-slider .dashboard-hero-content { max-width:60%; pointer-events:none; }
+  .slider-arrow { position:absolute; top:50%; transform:translateY(-50%); z-index:3; width:36px; height:36px; border-radius:50%;
+    background:rgba(17,24,39,0.4); color:#fff; border:none; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:background .2s ease; }
+  .slider-arrow:hover { background:rgba(17,24,39,0.65); }
+  .slider-arrow-left { left:16px; }
+  .slider-arrow-right { right:16px; }
+  .dashboard-slider-dots { position:absolute; bottom:14px; left:0; right:0; z-index:3; display:flex; justify-content:center; gap:8px; }
   .dashboard-slider-dot { width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,0.6); cursor:pointer; border:1px solid rgba(0,0,0,0.15); transition:background .2s ease, transform .2s ease; }
   .dashboard-slider-dot.active { background:#fff; transform:scale(1.25); }
-  @media (max-width: 640px) { .dashboard-slider { height:160px; } }
+  @media (max-width: 800px) {
+    .dashboard-hero.has-slider .dashboard-hero-content { max-width:100%; }
+    .dashboard-hero.has-slider { min-height:150px; }
+  }
+
+  /* Interactive focal-point picker (Settings → Dashboard Background Slider) */
+  .focal-picker { position:relative; width:100%; height:130px; border-radius:8px; background-color:#e5e7eb; cursor:crosshair; touch-action:none; user-select:none; }
+  .focal-marker { position:absolute; width:22px; height:22px; margin-left:-11px; margin-top:-11px; border-radius:50%;
+    border:2px solid #fff; box-shadow:0 0 0 1.5px rgba(0,0,0,0.45), 0 1px 4px rgba(0,0,0,0.4); pointer-events:none; }
+  .focal-marker::before, .focal-marker::after { content:''; position:absolute; background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,0.3); }
+  .focal-marker::before { left:50%; top:50%; width:10px; height:2px; margin-left:-5px; margin-top:-1px; }
+  .focal-marker::after { left:50%; top:50%; width:2px; height:10px; margin-left:-1px; margin-top:-5px; }
   .stat-card-clickable { cursor:pointer; }
   .stat-card-clickable:hover { transform:translateY(-3px); box-shadow:0 6px 16px rgba(0,0,0,0.12); background:#f8fafc; }
   body.dark-mode .stat-card-clickable:hover { background:#243244; box-shadow:0 6px 16px rgba(0,0,0,0.5); }
@@ -206,20 +229,92 @@
 
     <div class="content">
 
-      <!-- DASHBOARD -->
-      <div id="dashboard" class="page active">
-        <h1>Dashboard</h1>
-        <p class="subtitle">Overview &amp; quick access</p>
+<!-- DASHBOARD PAGE WITH INTEGRATED STYLES -->
+<div id="dashboard" class="page active">
+  <div id="dashboardHero" class="dashboard-hero">
+    
+    <!-- BACKGROUND SLIDER -->
+    <div id="dashboardSlider" class="dashboard-slider-bg" style="display:none;">
+      <div id="sliderTrack" class="dashboard-slider-track"></div>
+      
+      <button type="button" class="slider-arrow slider-arrow-left" onclick="prevSlide()" aria-label="Previous slide">&#10094;</button>
+      <button type="button" class="slider-arrow slider-arrow-right" onclick="nextSlide()" aria-label="Next slide">&#10095;</button>
+      <div id="sliderDots" class="dashboard-slider-dots"></div>
+    </div>
 
-        <div id="dashboardSlider" class="dashboard-slider" style="display:none;">
-          <div id="sliderTrack" class="dashboard-slider-track"></div>
-          <div id="sliderDots" class="dashboard-slider-dots"></div>
-        </div>
+    <!-- HERO CONTENT WITH TRANSPARENT BOXES -->
+    <div class="dashboard-hero-content" style="display: flex; flex-direction: column; gap: 10px; align-items: flex-start;">
+      
+      <!-- 1. DASHBOARD TITLE BOX -->
+      <div class="transparent-box title-box">
+        <h1 style="margin:0; font-size: 24px; font-weight: bold; color: #0f172a;">Dashboard</h1>
+      </div>
 
-        <div style="background:#fef9c3; border:1px solid #fde68a; color:#854d0e; padding:12px 18px; border-radius:8px; font-size:13px; margin-bottom:20px;">
-          ⚠️ Project is in Developing Mode — We appreciate your patience if you encounter any issues or missing data. | <strong>Project Developer: Israr Ahmed</strong>
-        </div>
+      <!-- 2. SUBTITLE BOX -->
+      <div class="transparent-box subtitle-box">
+        <p class="subtitle" style="margin:0; font-size: 13px; color: #334155; font-weight: 500;">Overview &amp; quick access</p>
+      </div>
 
+      <!-- 3. WARNING BANNER BOX (Single Row & Full Width Transparent) -->
+      <div class="transparent-box warning-box-transparent">
+        ⚠️ Project is in Developing Mode — We appreciate your patience if you encounter any issues or missing data. | <strong>Project Developer: Israr Ahmed</strong>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- STYLES -->
+<style>
+  /* Base Transparent Box Style (Light Translucent Glass Effect) */
+  .transparent-box {
+    background: rgba(255, 255, 255, 0.65) !important; /* Light transparent background */
+    backdrop-filter: blur(8px) !important;             /* Glass blur effect */
+    -webkit-backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important; /* Subtle light border */
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Title Box Padding */
+  .title-box {
+    padding: 6px 16px;
+    display: inline-block;
+  }
+
+  /* Subtitle Box Padding */
+  .subtitle-box {
+    padding: 4px 14px;
+    display: inline-block;
+  }
+
+  /* Warning Box Fix (Single Row & Full Width Light Yellowish Transparent) */
+  .warning-box-transparent {
+    background: rgba(254, 249, 195, 0.75) !important; /* Soft yellow transparent */
+    border: 1px solid rgba(253, 230, 138, 0.6) !important;
+    color: #854d0e;
+    padding: 10px 16px;
+    font-size: 13px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 10px;
+    
+    /* Strict Single Row Logic */
+    white-space: nowrap !important;
+    overflow-x: auto !important;
+  }
+
+  /* Remove Left Side Slider Blur Layer */
+  .dashboard-hero-gradient {
+    display: none !important;
+  }
+
+  .dashboard-slider-bg,
+  .dashboard-slider-track img {
+    filter: none !important;
+  }
+</style>
         <div class="panel">
           <h3>Featured Profiles</h3>
           <div id="profileCardsGrid" style="display:flex; flex-direction:row; flex-wrap:wrap; gap:10px;"></div>
@@ -1413,10 +1508,27 @@
   // Generic helpers — every table follows the same insert/update/delete pattern.
   // These fail silently into the console if Supabase isn't configured, so the
   // app still works locally (just without persistence) if you haven't set it up yet.
+  // Shows a small, non-blocking toast in the corner when a cloud save fails — so the user actually
+  // notices (previously these errors only went to the browser console, meaning data could silently
+  // fail to persist to Supabase with zero visible indication, e.g. a missing column on their table).
+  function showCloudErrorToast(message) {
+    let toast = document.getElementById('cloudErrorToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'cloudErrorToast';
+      toast.style.cssText = 'position:fixed; bottom:20px; right:20px; background:#dc2626; color:#fff; padding:14px 18px; border-radius:8px; font-size:13px; max-width:400px; z-index:99999; box-shadow:0 4px 16px rgba(0,0,0,0.3); line-height:1.4;';
+      document.body.appendChild(toast);
+    }
+    toast.innerText = '⚠️ Cloud save failed — this change was NOT saved permanently: ' + message;
+    toast.style.display = 'block';
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => { toast.style.display = 'none'; }, 8000);
+  }
+
   async function sbInsert(table, record) {
     if (!cloudEnabled) return null;
     const { error } = await db.from(table).insert(record);
-    if (error) console.error('[Supabase insert:' + table + ']', error.message);
+    if (error) { console.error('[Supabase insert:' + table + ']', error.message); showCloudErrorToast(error.message); }
     return error;
   }
   async function sbUpdate(table, id, record) {
@@ -1424,12 +1536,12 @@
     // upsert (not a plain update): if the row doesn't exist yet, this CREATES it instead of silently
     // doing nothing — this is what makes Settings actually persist to the cloud on first save.
     const { error } = await db.from(table).upsert({ id, ...record });
-    if (error) console.error('[Supabase update:' + table + ']', error.message);
+    if (error) { console.error('[Supabase update:' + table + ']', error.message); showCloudErrorToast(error.message); }
   }
   async function sbDelete(table, id) {
     if (!cloudEnabled) return;
     const { error } = await db.from(table).delete().eq('id', id);
-    if (error) console.error('[Supabase delete:' + table + ']', error.message);
+    if (error) { console.error('[Supabase delete:' + table + ']', error.message); showCloudErrorToast(error.message); }
   }
   async function sbFetchAll(table) {
     if (!cloudEnabled) return [];
@@ -4564,9 +4676,15 @@
   }
 
   // ===== DASHBOARD BACKGROUND SLIDER =====
-  let dashboardSliderImages = []; // array of base64 data URLs
+  // Each slide is { image: base64, posX: 0-100, posY: 0-100, zoom: 100+ } — posX/posY is the focal
+  // point (used as CSS background-position so the important part of the photo stays visible/centered
+  // when the container is a different shape), zoom lets you crop in further.
+  let dashboardSliderImages = [];
   let sliderCurrentIndex = 0;
   let sliderTimer = null;
+  let sliderFocalDragState = null; // { index, el } while the user is dragging a focal-point handle
+
+  function newSliderSlide(image) { return { image, posX: 50, posY: 50, zoom: 100 }; }
 
   function handleSliderImageUpload(event) {
     if (!guardWrite('settings', 'Dashboard slider image upload')) { event.target.value = ''; return; }
@@ -4577,7 +4695,7 @@
     files.forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        dashboardSliderImages.push(e.target.result);
+        dashboardSliderImages.push(newSliderSlide(e.target.result));
         loaded++;
         if (loaded === files.length) {
           renderSliderSettings();
@@ -4602,37 +4720,122 @@
     sbUpdate('app_settings', 'main', { dashboard_slider: JSON.stringify(dashboardSliderImages) });
   }
 
+  // background-size: once the user zooms in past 100% we switch from "cover" to an explicit
+  // percentage so the zoom actually has something to bite into.
+  function sliderBgStyle(s) {
+    const size = (s.zoom && s.zoom > 100) ? (s.zoom + '% auto') : 'cover';
+    return `background-image:url('${s.image}'); background-size:${size}; background-position:${s.posX}% ${s.posY}%;`;
+  }
+
   function renderSliderSettings() {
     if (!document.getElementById('sliderSettingsGrid')) return;
     sliderSettingsGrid.innerHTML = dashboardSliderImages.length
-      ? dashboardSliderImages.map((img, i) => `
-        <div style="border:1px solid #e5e7eb; border-radius:8px; padding:8px; text-align:center;">
-          <div style="width:100%; height:90px; border-radius:6px; background-image:url('${img}'); background-size:cover; background-position:center; margin-bottom:6px;"></div>
-          <button class="btn btn-danger btn-sm" onclick="deleteSliderImage(${i})">🗑 Delete</button>
+      ? dashboardSliderImages.map((s, i) => `
+        <div style="border:1px solid #e5e7eb; border-radius:8px; padding:10px;">
+          <p style="font-size:11px; color:#9ca3af; margin-bottom:6px;">📍 Click/drag on the photo to set the focal point (the part that always stays visible &amp; centered):</p>
+          <div class="focal-picker" id="focalPicker_${i}" style="${sliderBgStyle(s)}"
+               onmousedown="startFocalDrag(event, ${i})" ontouchstart="startFocalDrag(event, ${i})">
+            <div class="focal-marker" id="focalMarker_${i}" style="left:${s.posX}%; top:${s.posY}%;"></div>
+          </div>
+          <label style="display:block; font-size:11px; color:#6b7280; margin:8px 0 2px;">🔍 Zoom: <span id="sliderZoomVal_${i}">${s.zoom}%</span></label>
+          <input type="range" min="100" max="250" value="${s.zoom}" style="width:100%;"
+                 oninput="updateSliderZoom(${i}, this.value)" onchange="saveDashboardSlider()">
+          <div class="btn-row" style="margin-top:8px;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="resetSliderFocal(${i})">Reset to Center</button>
+            <button type="button" class="btn btn-danger btn-sm" onclick="deleteSliderImage(${i})">🗑 Delete</button>
+          </div>
         </div>
       `).join('')
       : '<p style="font-size:12px; color:#9ca3af;">Koi image upload nahi hui — upar se ek ya zyada images select karein.</p>';
   }
 
-  // Renders the full-width Dashboard slider (hides itself completely if there are no images)
+  function updateSliderZoom(i, value) {
+    if (!dashboardSliderImages[i]) return;
+    dashboardSliderImages[i].zoom = parseInt(value);
+    const picker = document.getElementById('focalPicker_' + i);
+    if (picker) picker.style.cssText = sliderBgStyle(dashboardSliderImages[i]);
+    const label = document.getElementById('sliderZoomVal_' + i);
+    if (label) label.innerText = value + '%';
+    renderDashboardSlider();
+  }
+
+  function resetSliderFocal(i) {
+    if (!guardWrite('settings', 'Reset slider focal point')) return;
+    if (!dashboardSliderImages[i]) return;
+    dashboardSliderImages[i].posX = 50;
+    dashboardSliderImages[i].posY = 50;
+    renderSliderSettings();
+    renderDashboardSlider();
+    saveDashboardSlider();
+  }
+
+  // ----- Drag-to-set-focal-point (mouse + touch) -----
+  function startFocalDrag(e, index) {
+    if (!guardWrite('settings', 'Set slider focal point')) return;
+    e.preventDefault();
+    sliderFocalDragState = { index, el: e.currentTarget };
+    updateFocalFromEvent(e);
+    document.addEventListener('mousemove', onFocalDragMove);
+    document.addEventListener('mouseup', onFocalDragEnd);
+    document.addEventListener('touchmove', onFocalDragMove, { passive: false });
+    document.addEventListener('touchend', onFocalDragEnd);
+  }
+  function onFocalDragMove(e) {
+    if (!sliderFocalDragState) return;
+    e.preventDefault();
+    updateFocalFromEvent(e);
+  }
+  function onFocalDragEnd() {
+    if (!sliderFocalDragState) return;
+    sliderFocalDragState = null;
+    document.removeEventListener('mousemove', onFocalDragMove);
+    document.removeEventListener('mouseup', onFocalDragEnd);
+    document.removeEventListener('touchmove', onFocalDragMove);
+    document.removeEventListener('touchend', onFocalDragEnd);
+    saveDashboardSlider();
+  }
+  function updateFocalFromEvent(e) {
+    const { index, el } = sliderFocalDragState;
+    const rect = el.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    let x = Math.round(((clientX - rect.left) / rect.width) * 100);
+    let y = Math.round(((clientY - rect.top) / rect.height) * 100);
+    x = Math.max(0, Math.min(100, x));
+    y = Math.max(0, Math.min(100, y));
+
+    const slide = dashboardSliderImages[index];
+    slide.posX = x; slide.posY = y;
+
+    // Cheap direct DOM update (no full re-render) so dragging feels instant
+    el.style.backgroundPosition = x + '% ' + y + '%';
+    const marker = document.getElementById('focalMarker_' + index);
+    if (marker) { marker.style.left = x + '%'; marker.style.top = y + '%'; }
+
+    renderDashboardSlider(); // live-preview the change on the actual Dashboard hero too
+  }
+
+  // Renders the full-width Dashboard hero slider (hides itself completely if there are no images)
   function renderDashboardSlider() {
     if (!document.getElementById('dashboardSlider')) return;
     clearInterval(sliderTimer);
 
     if (!dashboardSliderImages.length) {
       dashboardSlider.style.display = 'none';
+      dashboardHero.classList.remove('has-slider');
       return;
     }
     dashboardSlider.style.display = 'block';
-    sliderCurrentIndex = 0;
+    dashboardHero.classList.add('has-slider');
+    if (sliderCurrentIndex >= dashboardSliderImages.length) sliderCurrentIndex = 0;
 
-    sliderTrack.innerHTML = dashboardSliderImages.map(img =>
-      `<div class="dashboard-slider-slide" style="background-image:url('${img}');"></div>`
+    sliderTrack.innerHTML = dashboardSliderImages.map(s =>
+      `<div class="dashboard-slider-slide" style="${sliderBgStyle(s)}"></div>`
     ).join('');
-    sliderTrack.style.transform = 'translateX(0%)';
+    sliderTrack.style.transform = 'translateX(-' + (sliderCurrentIndex * 100) + '%)';
 
     sliderDots.innerHTML = dashboardSliderImages.length > 1
-      ? dashboardSliderImages.map((_, i) => `<div class="dashboard-slider-dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></div>`).join('')
+      ? dashboardSliderImages.map((_, i) => `<div class="dashboard-slider-dot ${i === sliderCurrentIndex ? 'active' : ''}" onclick="goToSlide(${i})"></div>`).join('')
       : '';
 
     if (dashboardSliderImages.length > 1) {
@@ -4644,6 +4847,14 @@
     sliderCurrentIndex = i;
     sliderTrack.style.transform = 'translateX(-' + (i * 100) + '%)';
     document.querySelectorAll('.dashboard-slider-dot').forEach((d, idx) => d.classList.toggle('active', idx === i));
+  }
+  function nextSlide() {
+    if (!dashboardSliderImages.length) return;
+    goToSlide((sliderCurrentIndex + 1) % dashboardSliderImages.length);
+  }
+  function prevSlide() {
+    if (!dashboardSliderImages.length) return;
+    goToSlide((sliderCurrentIndex - 1 + dashboardSliderImages.length) % dashboardSliderImages.length);
   }
 
   // ===== FEATURED PROFILES (Dashboard picture cards, editable from Settings) =====
@@ -4949,7 +5160,10 @@
         if (s.dashboard_slider) {
           try {
             const parsedSlider = JSON.parse(s.dashboard_slider);
-            if (Array.isArray(parsedSlider)) dashboardSliderImages = parsedSlider;
+            if (Array.isArray(parsedSlider)) {
+              // Backward-compat: older saves stored plain base64 strings instead of {image,posX,posY,zoom} objects
+              dashboardSliderImages = parsedSlider.map(item => typeof item === 'string' ? newSliderSlide(item) : item);
+            }
           } catch (e) { console.warn('Could not parse dashboard_slider:', e); }
         }
         if (s.challan_settings) {
