@@ -25,6 +25,20 @@
 
   .stats { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:15px; margin-bottom:30px; }
   .stat-card { background:#fff; border-radius:10px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05); border-left:4px solid transparent; transition:transform .12s ease, box-shadow .12s ease, background .12s ease; }
+  .mini-bar { margin-top:12px; height:6px; border-radius:4px; background:#f1f5f9; overflow:hidden; }
+  .mini-bar-fill { height:100%; width:0%; border-radius:4px; transition:width .5s ease; }
+  .mini-bar-caption { margin-top:5px; font-size:11px; color:#9ca3af; }
+  body.dark-mode .mini-bar { background:#334155; }
+  body.dark-mode .mini-bar-caption { color:#64748b; }
+
+  /* Dashboard Background Slider */
+  .dashboard-slider { position:relative; width:100%; height:260px; border-radius:12px; overflow:hidden; margin-bottom:22px; background:#e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+  .dashboard-slider-track { display:flex; width:100%; height:100%; transition:transform .6s ease; }
+  .dashboard-slider-slide { flex:0 0 100%; width:100%; height:100%; background-size:cover; background-position:center; }
+  .dashboard-slider-dots { position:absolute; bottom:12px; left:0; right:0; display:flex; justify-content:center; gap:8px; }
+  .dashboard-slider-dot { width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,0.6); cursor:pointer; border:1px solid rgba(0,0,0,0.15); transition:background .2s ease, transform .2s ease; }
+  .dashboard-slider-dot.active { background:#fff; transform:scale(1.25); }
+  @media (max-width: 640px) { .dashboard-slider { height:160px; } }
   .stat-card-clickable { cursor:pointer; }
   .stat-card-clickable:hover { transform:translateY(-3px); box-shadow:0 6px 16px rgba(0,0,0,0.12); background:#f8fafc; }
   body.dark-mode .stat-card-clickable:hover { background:#243244; box-shadow:0 6px 16px rgba(0,0,0,0.5); }
@@ -197,6 +211,11 @@
         <h1>Dashboard</h1>
         <p class="subtitle">Overview &amp; quick access</p>
 
+        <div id="dashboardSlider" class="dashboard-slider" style="display:none;">
+          <div id="sliderTrack" class="dashboard-slider-track"></div>
+          <div id="sliderDots" class="dashboard-slider-dots"></div>
+        </div>
+
         <div style="background:#fef9c3; border:1px solid #fde68a; color:#854d0e; padding:12px 18px; border-radius:8px; font-size:13px; margin-bottom:20px;">
           ⚠️ Project is in Developing Mode — We appreciate your patience if you encounter any issues or missing data. | <strong>Project Developer: Israr Ahmed</strong>
         </div>
@@ -207,19 +226,55 @@
         </div>
 
         <div class="stats">
-          <div class="stat-card stat-card-clickable" style="border-left-color:#3b82f6;" onclick="goToStudentsFiltered('All')"><div class="label">Total Students</div><div class="value" id="statTotalStudents">0</div></div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#3b82f6;" onclick="goToStudentsFiltered('All')">
+            <div class="label">Total Students</div><div class="value" id="statTotalStudents">0</div>
+            <div class="mini-bar"><div class="mini-bar-fill" id="barTotalStudents" style="background:#3b82f6;"></div></div>
+            <div class="mini-bar-caption" id="capTotalStudents"></div>
+          </div>
           <div class="stat-card stat-card-clickable" style="border-left-color:#8b5cf6;" onclick="goToModule('courses')"><div class="label">Total Subjects</div><div class="value" id="statTotalSubjects">0</div></div>
-          <div class="stat-card stat-card-clickable" style="border-left-color:#6366f1;" onclick="goToModule('admission')"><div class="label">Total Programs</div><div class="value" id="statTotalPrograms">0</div></div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#6366f1;" onclick="goToModule('programs')"><div class="label">Total Programs</div><div class="value" id="statTotalPrograms">0</div></div>
           <div class="stat-card stat-card-clickable" style="border-left-color:#14b8a6;" onclick="goToModule('departments')"><div class="label">Total Departments</div><div class="value" id="statTotalDepartments">0</div></div>
           <div class="stat-card stat-card-clickable" style="border-left-color:#f59e0b;" onclick="goToModule('faculty')"><div class="label">Total Faculty</div><div class="value" id="statTotalFaculty">0</div></div>
-          <div class="stat-card stat-card-clickable" style="border-left-color:#06b6d4;" onclick="goToStudentsFiltered('All')"><div class="label">Total Enrolled (All)</div><div class="value" id="statEnrolledAll">0</div></div>
-          <div class="stat-card stat-card-clickable" style="border-left-color:#10b981;" onclick="goToStudentsFiltered('Active')"><div class="label">Total Enrolled (Current)</div><div class="value" id="statEnrolledCurrent">0</div></div>
-          <div class="stat-card stat-card-clickable" style="border-left-color:#059669;" onclick="goToStudentsFiltered('Passed Out')"><div class="label">Total Passed Out</div><div class="value" id="statPassedOut">0</div></div>
-          <div class="stat-card stat-card-clickable" style="border-left-color:#ef4444;" onclick="goToStudentsFiltered('Dropout')"><div class="label">Total Dropout</div><div class="value" id="statDropout">0</div></div>
-          <div class="stat-card stat-card-clickable" style="border-left-color:#f43f5e;" onclick="goToStudentsFiltered('Quit')"><div class="label">Total Quit Students</div><div class="value" id="statQuit">0</div></div>
-          <div class="stat-card stat-card-clickable" style="border-left-color:#0ea5e9;" onclick="goToStudentsFrozen()"><div class="label">❄️ Semester Freeze</div><div class="value" id="statFrozen" style="color:#0ea5e9;">0</div></div>
-          <div class="stat-card stat-card-clickable" style="border-left-color:#d97706;" onclick="goToModule('addresult')"><div class="label">Pending Results</div><div class="value" id="statPendingResults" style="color:#dc2626;">0</div></div>
-          <div class="stat-card stat-card-clickable" style="border-left-color:#dc2626;" onclick="goToModule('fee')"><div class="label">Fee &amp; Dues</div><div class="value" id="statFeeDues" style="color:#dc2626;">Rs. 0</div></div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#10b981;" onclick="goToStudentsFiltered('Active')">
+            <div class="label">Total Enrolled (Current)</div><div class="value" id="statEnrolledCurrent">0</div>
+            <div class="mini-bar"><div class="mini-bar-fill" id="barEnrolledCurrent" style="background:#10b981;"></div></div>
+            <div class="mini-bar-caption" id="capEnrolledCurrent"></div>
+          </div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#7c3aed;" onclick="goToStudentsFiltered('Graduate')">
+            <div class="label">🎓 Graduates</div><div class="value" id="statGraduates" style="color:#7c3aed;">0</div>
+            <div class="mini-bar"><div class="mini-bar-fill" id="barGraduates" style="background:#7c3aed;"></div></div>
+            <div class="mini-bar-caption" id="capGraduates"></div>
+          </div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#059669;" onclick="goToStudentsFiltered('Passed Out')">
+            <div class="label">Total Passed Out</div><div class="value" id="statPassedOut">0</div>
+            <div class="mini-bar"><div class="mini-bar-fill" id="barPassedOut" style="background:#059669;"></div></div>
+            <div class="mini-bar-caption" id="capPassedOut"></div>
+          </div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#ef4444;" onclick="goToStudentsFiltered('Dropout')">
+            <div class="label">Total Dropout</div><div class="value" id="statDropout">0</div>
+            <div class="mini-bar"><div class="mini-bar-fill" id="barDropout" style="background:#ef4444;"></div></div>
+            <div class="mini-bar-caption" id="capDropout"></div>
+          </div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#f43f5e;" onclick="goToStudentsFiltered('Quit')">
+            <div class="label">Total Quit Students</div><div class="value" id="statQuit">0</div>
+            <div class="mini-bar"><div class="mini-bar-fill" id="barQuit" style="background:#f43f5e;"></div></div>
+            <div class="mini-bar-caption" id="capQuit"></div>
+          </div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#0ea5e9;" onclick="goToStudentsFrozen()">
+            <div class="label">❄️ Semester Freeze</div><div class="value" id="statFrozen" style="color:#0ea5e9;">0</div>
+            <div class="mini-bar"><div class="mini-bar-fill" id="barFrozen" style="background:#0ea5e9;"></div></div>
+            <div class="mini-bar-caption" id="capFrozen"></div>
+          </div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#d97706;" onclick="goToModule('addresult')">
+            <div class="label">Pending Results</div><div class="value" id="statPendingResults" style="color:#dc2626;">0</div>
+            <div class="mini-bar"><div class="mini-bar-fill" id="barPendingResults" style="background:#d97706;"></div></div>
+            <div class="mini-bar-caption" id="capPendingResults"></div>
+          </div>
+          <div class="stat-card stat-card-clickable" style="border-left-color:#dc2626;" onclick="goToModule('fee')">
+            <div class="label">Fee &amp; Dues</div><div class="value" id="statFeeDues" style="color:#dc2626;">Rs. 0</div>
+            <div class="mini-bar"><div class="mini-bar-fill" id="barFeeDues" style="background:#dc2626;"></div></div>
+            <div class="mini-bar-caption" id="capFeeDues"></div>
+          </div>
         </div>
 
         <div class="panel">
@@ -487,9 +542,16 @@
             <h3>Student List</h3>
             <div class="btn-row">
               <input type="text" class="search-box" id="studentSearch" placeholder="Search by name/program..." oninput="renderStudents()">
+              <select id="studentSessionFilter" onchange="renderStudents()" style="padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px;">
+                <option value="All">All Sessions</option>
+              </select>
+              <select id="studentProgramFilter" onchange="renderStudents()" style="padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px;">
+                <option value="All">All Programs</option>
+              </select>
               <select id="studentStatusFilter" onchange="renderStudents()" style="padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px;">
                 <option value="All">All Statuses</option>
                 <option value="Active">Active</option>
+                <option value="Graduate">🎓 Graduate</option>
                 <option value="Passed Out">Passed Out</option>
                 <option value="Dropout">Dropout</option>
                 <option value="Quit">Quit</option>
@@ -1307,6 +1369,13 @@
         </div>
 
         <div class="panel">
+          <h3>🖼 Dashboard Background Slider</h3>
+          <p style="font-size:13px; color:#9ca3af; margin-bottom:10px;">Dashboard ke bilkul upar full-width image slider dikhta hai. Ek ya zyada images upload karein — 1 se zyada ho to khud-ba-khud har few seconds mein slide badalti hai.</p>
+          <input type="file" id="sliderImageInput" accept="image/*" multiple style="margin-bottom:12px;" onchange="handleSliderImageUpload(event)">
+          <div id="sliderSettingsGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:12px;"></div>
+        </div>
+
+        <div class="panel">
           <h3>Featured Profiles (Dashboard picture cards)</h3>
           <p style="font-size:13px; color:#9ca3af; margin-bottom:10px;">Add as many photos as you like, each with an optional short caption (max 30 words). Use Enable/Disable to hide a card from the Dashboard without deleting it, or Delete to remove it permanently.</p>
           <div id="profileSettingsGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:15px;"></div>
@@ -1535,6 +1604,8 @@
     showPage('students', mi);
     studentStatusFilter.value = status;
     studentSearch.value = '';
+    studentSessionFilter.value = 'All';
+    studentProgramFilter.value = 'All';
     renderStudents();
   }
 
@@ -1762,7 +1833,8 @@
     if (id === 'timetable') populateTimetableDropdowns();
     if (id === 'datesheet') populateDatesheetDropdowns();
     if (id === 'fee') populateFeeDropdown();
-    if (id === 'settings') { renderProfileSettings(); renderAccessControlSettings(); renderTranscriptSettings(); renderChallanSettings(); renderFeeTypesSettings(); }
+    if (id === 'settings') { renderProfileSettings(); renderAccessControlSettings(); renderTranscriptSettings(); renderChallanSettings(); renderFeeTypesSettings(); renderSliderSettings(); }
+    if (id === 'dashboard') { renderDashboardSlider(); }
     if (id === 'addresult') populateAddResultCourses();
     if (id === 'challan') { populateChallanStudentDropdown(); populateChallanFeeTypeDropdown(); renderChallans(); }
     if (id === 'users') renderPermissionEditor(userRole.value, null);
@@ -2197,6 +2269,13 @@
     populateProgramSelect('feeReportProgram', true);   // Fee → Fee Status Report
     populateProgramSelect('resProgram', true);         // Merit & Results → Results tab
     populateProgramSelect('meritProgram', true);       // Merit & Results → Scholarships tab
+    populateProgramSelect('studentProgramFilter', true); // Students page filter
+
+    if (document.getElementById('studentSessionFilter')) {
+      const current = studentSessionFilter.value;
+      studentSessionFilter.innerHTML = '<option value="All">All Sessions</option>' +
+        SESSION_OPTIONS.split('|').map(s => `<option ${s === current ? 'selected' : ''}>${s}</option>`).join('');
+    }
   }
 
   function renderPrograms() {
@@ -2233,6 +2312,7 @@
     refreshProgramOptions();
     cancelEditProgram();
     renderPrograms();
+    renderDashboardStats();
   });
 
   function editProgram(i) {
@@ -2269,6 +2349,7 @@
     if (record) sbDelete('programs', record.id);
     refreshProgramOptions();
     renderPrograms();
+    renderDashboardStats();
   }
 
   function renderAdmissions() {
@@ -2294,9 +2375,13 @@
   function renderStudents() {
     const q = (studentSearch.value || '').toLowerCase();
     const statusFilter = studentStatusFilter.value || 'All';
+    const sessionFilter = studentSessionFilter ? (studentSessionFilter.value || 'All') : 'All';
+    const programFilter = studentProgramFilter ? (studentProgramFilter.value || 'All') : 'All';
     const filtered = admissions.filter(a =>
       (a.name.toLowerCase().includes(q) || a.program.toLowerCase().includes(q)) &&
-      (statusFilter === 'All' || (statusFilter === 'Frozen' ? !!a.frozen : (a.status || 'Active') === statusFilter))
+      (statusFilter === 'All' || (statusFilter === 'Frozen' ? !!a.frozen : (a.status || 'Active') === statusFilter)) &&
+      (sessionFilter === 'All' || a.session === sessionFilter) &&
+      (programFilter === 'All' || a.program === programFilter)
     );
     studentsTable.innerHTML = filtered.map(a => {
       const i = admissions.indexOf(a);
@@ -2651,6 +2736,28 @@
     return 'F';
   }
 
+  // Auto-promotes a student to "Graduate" status once they've passed (total >= 40) every course
+  // in their final (8th) semester. Called right after any exam mark is saved.
+  function checkAndMarkGraduate(studentName) {
+    const student = admissions.find(a => a.name === studentName);
+    if (!student || student.status === 'Graduate') return;
+
+    const finalSemCourses = courses.filter(c => c.program ? c.program === student.program : true).filter(c => c.semester === 8);
+    // Fall back to "any 8th-semester course" if courses aren't tagged per-program
+    const relevantCourses = finalSemCourses.length ? finalSemCourses : courses.filter(c => c.semester === 8);
+    if (!relevantCourses.length) return;
+
+    const studentSem8Marks = examMarks.filter(m => m.student === studentName && parseInt(m.semester) === 8);
+    const allCoursesGraded = relevantCourses.every(c => studentSem8Marks.some(m => m.course === c.name));
+    const allPassed = studentSem8Marks.every(m => m.total >= 40);
+
+    if (allCoursesGraded && allPassed && studentSem8Marks.length) {
+      student.status = 'Graduate';
+      renderDashboardStats();
+      renderStudents();
+    }
+  }
+
   document.getElementById('marksForm').addEventListener('submit', function(e) {
     e.preventDefault();
     if (!guardWrite('exams', 'Marks entry')) return;
@@ -2688,6 +2795,7 @@
     };
     examMarks.push(record);
     sbInsert('exam_marks', record);
+    checkAndMarkGraduate(record.student);
 
     this.reset();
     totalEntryBox.style.display = 'grid';
@@ -2887,6 +2995,10 @@
     }
 
     renderAll();
+    if (sem === 8) {
+      const namesJustSaved = new Set(examMarks.filter(m => parseInt(m.semester) === 8 && m.course === courseName).map(m => m.student));
+      namesJustSaved.forEach(name => checkAndMarkGraduate(name));
+    }
     alert(savedCount + ' result(s) saved for ' + courseName + '.');
   }
 
@@ -4151,6 +4263,13 @@
       usedNames.add(name);
       const fatherFirst = randPick(maleFirstNames);
       studentNames.push(name);
+      const semester = (i % 8) + 1;
+      let status = 'Active';
+      const roll = Math.random();
+      if (semester === 8 && roll > 0.5) status = roll > 0.75 ? 'Graduate' : 'Passed Out';
+      else if (roll < 0.08) status = 'Dropout';
+      else if (roll < 0.13) status = 'Quit';
+
       newAdmissions.push({
         id: newId(), rollNo: generateRollNo(program, session),
         name: name,
@@ -4159,8 +4278,8 @@
         phone: '03' + (200000000 + i * 91).toString().slice(0,9),
         program: program,
         session: session,
-        currentSemester: (i % 8) + 1,
-        status: 'Active',
+        currentSemester: semester,
+        status: status,
         isDummy: true,
         frozen: i % 11 === 0 // a few students frozen, for realistic demo data
       });
@@ -4384,21 +4503,21 @@
   function renderDashboardStats() {
     const totalStudents = admissions.length;
     const totalSubjects = courses.length;
-    const distinctPrograms = new Set(admissions.map(a => a.program).filter(Boolean));
-    const totalPrograms = distinctPrograms.size || 5; // fallback to the 5 standard programs if no admissions yet
+    const totalPrograms = programs.length; // dynamic — driven entirely by the Programs module, no hardcoded fallback
     const totalDepartments = departments.length;
     const totalFaculty = faculty.length;
-    const enrolledAll = admissions.length; // everyone ever admitted
     const enrolledCurrent = admissions.filter(a => (a.status || 'Active') === 'Active').length;
+    const graduates = admissions.filter(a => a.status === 'Graduate').length;
     const passedOut = admissions.filter(a => a.status === 'Passed Out').length;
     const dropout = admissions.filter(a => a.status === 'Dropout').length;
     const quit = admissions.filter(a => a.status === 'Quit').length;
     const frozenCount = admissions.filter(a => a.frozen).length;
 
     // Pending Results: for each active student, count courses in their current semester that don't have a saved mark yet
-    let pendingResults = 0;
+    let pendingResults = 0, totalExpectedResults = 0;
     admissions.filter(a => (a.status || 'Active') === 'Active').forEach(a => {
       const semCourses = courses.filter(c => c.semester === a.currentSemester);
+      totalExpectedResults += semCourses.length;
       semCourses.forEach(c => {
         const hasMark = examMarks.some(m => m.student === a.name && m.course === c.name && parseInt(m.semester) === a.currentSemester);
         if (!hasMark) pendingResults++;
@@ -4406,20 +4525,125 @@
     });
 
     const feeDues = feeRecords.filter(f => f.status === 'Unpaid').reduce((s,f) => s + f.amount, 0);
+    const feeTotal = feeRecords.reduce((s,f) => s + f.amount, 0);
 
     statTotalStudents.innerText = totalStudents;
     statTotalSubjects.innerText = totalSubjects;
     statTotalPrograms.innerText = totalPrograms;
     statTotalDepartments.innerText = totalDepartments;
     statTotalFaculty.innerText = totalFaculty;
-    statEnrolledAll.innerText = enrolledAll;
     statEnrolledCurrent.innerText = enrolledCurrent;
+    statGraduates.innerText = graduates;
     statPassedOut.innerText = passedOut;
     statDropout.innerText = dropout;
     statQuit.innerText = quit;
     statFrozen.innerText = frozenCount;
     statPendingResults.innerText = pendingResults;
     statFeeDues.innerText = 'Rs. ' + feeDues.toLocaleString();
+
+    // Proportional progress bars — each bar shows this metric's share of the relevant total
+    setBar('barTotalStudents', 'capTotalStudents', enrolledCurrent, totalStudents, enrolledCurrent + ' Active / ' + totalStudents);
+    setBar('barEnrolledCurrent', 'capEnrolledCurrent', enrolledCurrent, totalStudents, enrolledCurrent + ' of ' + totalStudents + ' students');
+    setBar('barGraduates', 'capGraduates', graduates, totalStudents, graduates + ' of ' + totalStudents + ' students');
+    setBar('barPassedOut', 'capPassedOut', passedOut, totalStudents, passedOut + ' of ' + totalStudents + ' students');
+    setBar('barDropout', 'capDropout', dropout, totalStudents, dropout + ' of ' + totalStudents + ' students');
+    setBar('barQuit', 'capQuit', quit, totalStudents, quit + ' of ' + totalStudents + ' students');
+    setBar('barFrozen', 'capFrozen', frozenCount, totalStudents, frozenCount + ' of ' + totalStudents + ' students');
+    setBar('barPendingResults', 'capPendingResults', pendingResults, totalExpectedResults, pendingResults + ' of ' + totalExpectedResults + ' expected results');
+    setBar('barFeeDues', 'capFeeDues', feeDues, feeTotal, 'Rs. ' + feeDues.toLocaleString() + ' of Rs. ' + feeTotal.toLocaleString());
+  }
+
+  // Sets a mini progress-bar's fill width (proportional to value/total) and its caption text
+  function setBar(barId, capId, value, total, captionText) {
+    const bar = document.getElementById(barId);
+    const cap = document.getElementById(capId);
+    if (!bar || !cap) return;
+    const pct = total > 0 ? Math.min(100, Math.round((value / total) * 100)) : 0;
+    bar.style.width = pct + '%';
+    cap.innerText = captionText + ' (' + pct + '%)';
+  }
+
+  // ===== DASHBOARD BACKGROUND SLIDER =====
+  let dashboardSliderImages = []; // array of base64 data URLs
+  let sliderCurrentIndex = 0;
+  let sliderTimer = null;
+
+  function handleSliderImageUpload(event) {
+    if (!guardWrite('settings', 'Dashboard slider image upload')) { event.target.value = ''; return; }
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    let loaded = 0;
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        dashboardSliderImages.push(e.target.result);
+        loaded++;
+        if (loaded === files.length) {
+          renderSliderSettings();
+          renderDashboardSlider();
+          saveDashboardSlider();
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    event.target.value = '';
+  }
+
+  function deleteSliderImage(i) {
+    if (!guardWrite('settings', 'Dashboard slider image delete')) return;
+    dashboardSliderImages.splice(i, 1);
+    renderSliderSettings();
+    renderDashboardSlider();
+    saveDashboardSlider();
+  }
+
+  function saveDashboardSlider() {
+    sbUpdate('app_settings', 'main', { dashboard_slider: JSON.stringify(dashboardSliderImages) });
+  }
+
+  function renderSliderSettings() {
+    if (!document.getElementById('sliderSettingsGrid')) return;
+    sliderSettingsGrid.innerHTML = dashboardSliderImages.length
+      ? dashboardSliderImages.map((img, i) => `
+        <div style="border:1px solid #e5e7eb; border-radius:8px; padding:8px; text-align:center;">
+          <div style="width:100%; height:90px; border-radius:6px; background-image:url('${img}'); background-size:cover; background-position:center; margin-bottom:6px;"></div>
+          <button class="btn btn-danger btn-sm" onclick="deleteSliderImage(${i})">🗑 Delete</button>
+        </div>
+      `).join('')
+      : '<p style="font-size:12px; color:#9ca3af;">Koi image upload nahi hui — upar se ek ya zyada images select karein.</p>';
+  }
+
+  // Renders the full-width Dashboard slider (hides itself completely if there are no images)
+  function renderDashboardSlider() {
+    if (!document.getElementById('dashboardSlider')) return;
+    clearInterval(sliderTimer);
+
+    if (!dashboardSliderImages.length) {
+      dashboardSlider.style.display = 'none';
+      return;
+    }
+    dashboardSlider.style.display = 'block';
+    sliderCurrentIndex = 0;
+
+    sliderTrack.innerHTML = dashboardSliderImages.map(img =>
+      `<div class="dashboard-slider-slide" style="background-image:url('${img}');"></div>`
+    ).join('');
+    sliderTrack.style.transform = 'translateX(0%)';
+
+    sliderDots.innerHTML = dashboardSliderImages.length > 1
+      ? dashboardSliderImages.map((_, i) => `<div class="dashboard-slider-dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></div>`).join('')
+      : '';
+
+    if (dashboardSliderImages.length > 1) {
+      sliderTimer = setInterval(() => goToSlide((sliderCurrentIndex + 1) % dashboardSliderImages.length), 4500);
+    }
+  }
+
+  function goToSlide(i) {
+    sliderCurrentIndex = i;
+    sliderTrack.style.transform = 'translateX(-' + (i * 100) + '%)';
+    document.querySelectorAll('.dashboard-slider-dot').forEach((d, idx) => d.classList.toggle('active', idx === i));
   }
 
   // ===== FEATURED PROFILES (Dashboard picture cards, editable from Settings) =====
@@ -4635,6 +4859,7 @@
     renderChallans();
     refreshProgramOptions();
     renderPrograms();
+    renderDashboardSlider();
   }
 
   // ===== INITIAL LOAD FROM SUPABASE =====
@@ -4720,6 +4945,12 @@
             const parsedPages = JSON.parse(s.guest_pages);
             if (Array.isArray(parsedPages)) guestSettings.pages = parsedPages;
           } catch (e) { console.warn('Could not parse guest_pages:', e); }
+        }
+        if (s.dashboard_slider) {
+          try {
+            const parsedSlider = JSON.parse(s.dashboard_slider);
+            if (Array.isArray(parsedSlider)) dashboardSliderImages = parsedSlider;
+          } catch (e) { console.warn('Could not parse dashboard_slider:', e); }
         }
         if (s.challan_settings) {
           try {
