@@ -1136,7 +1136,7 @@
         <div class="panel">
           <h3>🧠 Smart Date Sheet Generator (Auto-Grouped, Printable)</h3>
           <p style="font-size:12px; color:#9ca3af; margin-bottom:10px;">
-            Timetable data se khud-ba-khud ek proper Date Sheet banata hai: <b>same subject</b> jo kayi programs mein ho (jaise Pak Studies, Islamic Studies, English) woh sab programs ke liye <b>ek hi date/slot</b> par lag jata hai; aur agar <b>ek hi teacher</b> do departments mein wohi subject parhata ho, to un dono ko bhi clash na ho isliye ek sath schedule kiya jata hai. Sunday khud-ba-khud skip hota hai.
+            <b>Timetable</b> se khud-ba-khud ek proper Date Sheet banata hai: <b>same subject</b> jo kayi programs mein ho (jaise Pak Studies, Islamic Studies, English) woh sab programs ke liye <b>ek hi date/slot</b> par lag jata hai; aur agar <b>ek hi teacher</b> do departments mein wohi subject parhata ho, to un dono ko bhi clash na ho isliye alag din schedule kiya jata hai. Jis program ka Timetable is semester ke liye nahi bana, wo <b>khud-ba-khud skip</b> ho kar baqi programs generate ho jate hain. Sunday khud-ba-khud skip hota hai.
           </p>
           <div class="form-grid">
             <div class="form-group"><label>Semester</label>
@@ -3796,69 +3796,60 @@
     document.querySelectorAll('.sdgProgramChk').forEach(c => c.checked = checked);
   }
 
-  // Faculty currently assigned to a given Program + Course + Semester (from the Timetable) —
-  // used to detect "same teacher, different department" clashes so we don't double-book them.
-  function getFacultyFor(program, courseName, semester) {
-    const entry = timetable.find(t => t.program === program && t.course === courseName && t.semester === semester);
-    return entry ? entry.faculty : '';
-  }
-
-  // Builds each selected program's ordered list of courses for the semester — universal subjects
-  // (Pak Studies, Islamic Studies, etc.) are moved to the FRONT so they naturally land on the same
-  // early dates across every program that has them.
+  // Builds each selected program's ordered list of {course, faculty} — sourced from the TIMETABLE
+  // (not the Courses module), since Timetable already links each program to its actual assigned
+  // course + teacher. Universal subjects (Pak Studies, Islamic Studies, etc.) are moved to the FRONT
+  // so they naturally land on the same early dates across every program that has them. A program with
+  // NO Timetable entries for this semester is automatically skipped (not an error) — the rest still generate.
   function buildProgramCourseQueues(selectedPrograms, semester, universalSubjects) {
     const queues = {};
+    const skipped = [];
     selectedPrograms.forEach(progName => {
-      const progObj = programs.find(p => p.name === progName);
-      const dept = progObj ? progObj.department : '';
-      const semCourses = courses.filter(c => c.semester === semester && (!dept || c.department === dept));
+      const ttEntries = timetable.filter(t => t.program === progName && t.semester === semester);
+      // A course can appear more than once in the weekly Timetable (multiple lecture slots) — only need it once for the exam
+      const uniqueCourses = [...new Map(ttEntries.map(t => [t.course, t])).values()];
+      if (!uniqueCourses.length) { skipped.push(progName); return; }
+
       const isUniversal = (name) => universalSubjects.some(u => name.toLowerCase().includes(u.toLowerCase()));
-      const universal = semCourses.filter(c => isUniversal(c.name));
-      const rest = semCourses.filter(c => !isUniversal(c.name));
-      queues[progName] = [...universal, ...rest].map(c => c.name);
+      const universal = uniqueCourses.filter(t => isUniversal(t.course));
+      const rest = uniqueCourses.filter(t => !isUniversal(t.course));
+      queues[progName] = [...universal, ...rest].map(t => ({ course: t.course, faculty: t.faculty || '' }));
     });
-    return queues;
+    return { queues, skipped };
   }
 
   // Core scheduling algorithm: walks day-by-day (skipping Sundays + holidays), giving each program
   // ONE paper per day from the front of its queue — unless that would double-book a teacher who's
   // already examining a different program's paper that same day, in which case it's deferred to the
   // next available day. Universal subjects, being at the front of every queue, naturally align on the
-  // same date(s) for every program that has them.
+  // same date(s) for every program that has them. Programs with no Timetable data for this semester
+  // are skipped automatically (reported back so the caller can inform the user).
   function runMasterScheduler(selectedPrograms, semester, startDate, excludeSet, universalSubjects) {
-    const queues = buildProgramCourseQueues(selectedPrograms, semester, universalSubjects);
+    const { queues, skipped } = buildProgramCourseQueues(selectedPrograms, semester, universalSubjects);
+    const activePrograms = selectedPrograms.filter(p => queues[p] && queues[p].length);
     const days = []; // [{ date: Date, assignments: [{program, course}] }]
     let cursor = nextValidDate(startDate, excludeSet);
     let guard = 0; // safety net against infinite loops
 
-    while (Object.values(queues).some(q => q.length) && guard < 200) {
+    while (activePrograms.some(p => queues[p].length) && guard < 200) {
       guard++;
       const usedFacultyToday = new Set();
-      const deferred = {};
       const assignments = [];
 
-      selectedPrograms.forEach(progName => {
+      activePrograms.forEach(progName => {
         if (!queues[progName].length) return;
-        const courseName = queues[progName][0];
-        const faculty = getFacultyFor(progName, courseName, semester);
-        if (faculty && usedFacultyToday.has(faculty)) {
-          deferred[progName] = true; // teacher already booked today — push this program to tomorrow
-          return;
-        }
-        if (faculty) usedFacultyToday.add(faculty);
-        assignments.push({ program: progName, course: courseName });
+        const item = queues[progName][0];
+        if (item.faculty && usedFacultyToday.has(item.faculty)) return; // teacher already booked today — stays at front of queue for tomorrow
+        if (item.faculty) usedFacultyToday.add(item.faculty);
+        assignments.push({ program: progName, course: item.course });
         queues[progName].shift();
       });
 
       if (assignments.length) days.push({ date: cursor, assignments });
       cursor = nextValidDate(addLocalDays(cursor, 1), excludeSet);
-
-      // Programs deferred purely by faculty clash just keep their course at the front of the
-      // queue automatically (we only .shift()'d the ones actually scheduled today), so nothing
-      // else to do here — the while-loop's next pass will retry them on the next valid date.
-      if (!assignments.length && !Object.keys(deferred).length) break; // nothing left to schedule
+      if (!assignments.length) break; // nothing left to schedule (or an unresolvable clash) — stop
     }
-    return days;
+    return { days, skipped };
   }
 
   // Groups one day's per-program assignments by course name (so e.g. "Pak Studies" for 4 different
@@ -3892,8 +3883,14 @@
       : Array.from(document.querySelectorAll('.sdgProgramChk:checked')).map(c => c.value);
     if (!selectedPrograms.length) { alert('Please select at least one Program.'); return; }
 
-    const days = runMasterScheduler(selectedPrograms, semester, parseLocalDate(startDateStr), excludeSet, universalSubjects);
-    if (!days.length) { alert('No courses found for Semester ' + semester + ' for the selected programs. Add Courses first.'); return; }
+    const { days, skipped } = runMasterScheduler(selectedPrograms, semester, parseLocalDate(startDateStr), excludeSet, universalSubjects);
+    if (!days.length) {
+      alert('No Timetable entries found for Semester ' + semester + ' for any of the selected programs. Add the Timetable first (Timetable page).');
+      return;
+    }
+    if (skipped.length) {
+      alert('Note: skipped (no Timetable data for Semester ' + semester + '): ' + skipped.join(', ') + '.\n\nGenerating the Date Sheet for the remaining ' + (selectedPrograms.length - skipped.length) + ' program(s)...');
+    }
 
     printMasterDatesheet(days, { semester, timeSlot, examTitle, session });
   }
