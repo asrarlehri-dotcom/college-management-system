@@ -1132,6 +1132,58 @@
           </div>
           <button class="btn" onclick="generateDatesheetFromTimetable()">🗓 Generate Datesheet</button>
         </div>
+
+        <div class="panel">
+          <h3>🧠 Smart Date Sheet Generator (Auto-Grouped, Printable)</h3>
+          <p style="font-size:12px; color:#9ca3af; margin-bottom:10px;">
+            Timetable data se khud-ba-khud ek proper Date Sheet banata hai: <b>same subject</b> jo kayi programs mein ho (jaise Pak Studies, Islamic Studies, English) woh sab programs ke liye <b>ek hi date/slot</b> par lag jata hai; aur agar <b>ek hi teacher</b> do departments mein wohi subject parhata ho, to un dono ko bhi clash na ho isliye ek sath schedule kiya jata hai. Sunday khud-ba-khud skip hota hai.
+          </p>
+          <div class="form-grid">
+            <div class="form-group"><label>Semester</label>
+              <select id="sdgSemester">
+                <option value="">-- select --</option>
+                <option>1</option><option>2</option><option>3</option><option>4</option>
+                <option>5</option><option>6</option><option>7</option><option>8</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Start Date</label><input type="date" id="sdgStartDate"></div>
+            <div class="form-group"><label>Time Slot</label><input type="text" id="sdgTimeSlot" value="09:00 AM to 12:00 PM"></div>
+            <div class="form-group"><label>Exam Title</label><input type="text" id="sdgExamTitle" value="Mid Term &amp; Final Term Examination"></div>
+            <div class="form-group"><label>Session <span style="color:#9ca3af; font-weight:normal;">(shown in header, e.g. 2024-2028)</span></label><input type="text" id="sdgSession" placeholder="e.g. 2024-2028"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label>Holidays / Exclude Dates <span style="color:#9ca3af; font-weight:normal;">(optional — comma separated, e.g. 2026-08-14, 2026-08-25)</span></label>
+            <input type="text" id="sdgExcludeDates" placeholder="e.g. 2026-08-14, 2026-08-25">
+          </div>
+          <div class="form-group" style="margin-bottom:14px;">
+            <label>Universal Subjects <span style="color:#9ca3af; font-weight:normal;">(scheduled on the SAME date for every program that has them — comma separated)</span></label>
+            <input type="text" id="sdgUniversalSubjects" value="Functional English, Pak Studies, Islamic Studies">
+          </div>
+          <div style="margin-bottom:14px;">
+            <label style="font-size:13px; font-weight:600; color:#374151;">Programs to Include:</label>
+            <div class="btn-row" style="margin:6px 0 8px;">
+              <button type="button" class="btn btn-outline btn-sm" onclick="toggleAllSdgPrograms(true)">Select All</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="toggleAllSdgPrograms(false)">Clear All</button>
+            </div>
+            <div id="sdgProgramsGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px,1fr)); gap:6px;"></div>
+          </div>
+
+          <div style="margin-bottom:14px; border-top:1px dashed #e5e7eb; padding-top:12px;">
+            <label style="font-size:13px; font-weight:600; color:#374151;">🏛 Hall Allocation <span style="color:#9ca3af; font-weight:normal;">(map one or more programs to a single exam hall)</span></label>
+            <div id="hallAllocationList" style="margin:8px 0;"></div>
+            <div class="form-grid">
+              <div class="form-group"><label>Hall Name</label><input type="text" id="hallAllocName" placeholder="e.g. Main Hall"></div>
+              <div class="form-group" style="grid-column: span 2;"><label>Programs (comma separated)</label><input type="text" id="hallAllocPrograms" placeholder="e.g. BS English, BS Economics"></div>
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="addHallAllocation()">➕ Add Hall Mapping</button>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn" onclick="generateSmartDatesheet(false)">🧠 Generate Date Sheet (Selected Programs)</button>
+            <button class="btn btn-outline" onclick="generateSmartDatesheet(true)">🌐 All Programs (Master Date Sheet)</button>
+          </div>
+        </div>
+
         <div class="panel">
           <div class="panel-head">
             <h3>Exam Datesheet</h3>
@@ -1905,7 +1957,7 @@
     if (id === 'exams') populateExamDropdowns();
     if (id === 'reports') populateReportDropdown();
     if (id === 'timetable') populateTimetableDropdowns();
-    if (id === 'datesheet') populateDatesheetDropdowns();
+    if (id === 'datesheet') { populateDatesheetDropdowns(); populateSdgProgramsGrid(); renderHallAllocationList(); }
     if (id === 'fee') populateFeeDropdown();
     if (id === 'settings') { renderProfileSettings(); renderAccessControlSettings(); renderTranscriptSettings(); renderChallanSettings(); renderFeeTypesSettings(); renderSliderSettings(); }
     if (id === 'dashboard') { renderDashboardSlider(); }
@@ -3646,10 +3698,9 @@
     if (!toCreate.length) { alert('Every course for this Program + Semester already has a datesheet entry.'); return; }
 
     const newEntries = toCreate.map((t, i) => {
-      const examDate = new Date(startDate + 'T00:00:00');
-      examDate.setDate(examDate.getDate() + i); // one exam per day
+      const examDate = addLocalDays(parseLocalDate(startDate), i); // one exam per day
       return {
-        id: newId(), date: examDate.toISOString().split('T')[0], time: timeSlot,
+        id: newId(), date: formatLocalDate(examDate), time: timeSlot,
         course: t.course, program: program, semester: semester, room: t.room || ''
       };
     });
@@ -3659,6 +3710,259 @@
     renderDatesheet();
     alert(newEntries.length + ' datesheet entries generated from the Timetable! You can edit Date/Time/Room directly in the table below.');
   }
+
+  // ===== SMART MASTER DATE SHEET GENERATOR =====
+  // Modular date helpers — fixes the classic JS timezone bug where new Date('2026-08-10')
+  // is parsed as UTC midnight, then toISOString()/toDateString() can print the PREVIOUS day
+  // in timezones behind UTC. We only ever build/read dates from local Y/M/D components.
+  function parseLocalDate(str) {
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  function formatLocalDate(date) {
+    const y = date.getFullYear(), m = String(date.getMonth() + 1).padStart(2, '0'), d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  function addLocalDays(date, n) {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    d.setDate(d.getDate() + n);
+    return d;
+  }
+  function formatDayName(date) {
+    return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][date.getDay()];
+  }
+  function formatDisplayDate(date) {
+    const d = String(date.getDate()).padStart(2, '0'), m = String(date.getMonth() + 1).padStart(2, '0');
+    return `${d}/${m}/${date.getFullYear()}`;
+  }
+  // Advances one day at a time from `date` until it lands on a non-Sunday, non-excluded date
+  function nextValidDate(date, excludeSet) {
+    let d = date;
+    while (d.getDay() === 0 || excludeSet.has(formatLocalDate(d))) {
+      d = addLocalDays(d, 1);
+    }
+    return d;
+  }
+
+  // ----- Hall Allocation (map one or more programs to a single exam hall) -----
+  let hallAllocations = []; // [{ hall: 'Main Hall', programs: ['BS English','BS Economics'] }]
+
+  function renderHallAllocationList() {
+    if (!document.getElementById('hallAllocationList')) return;
+    hallAllocationList.innerHTML = hallAllocations.length
+      ? hallAllocations.map((h, i) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; border:1px solid #e5e7eb; border-radius:6px; margin-bottom:6px; font-size:13px;">
+          <span><b>${h.hall}</b> — ${h.programs.join(', ')}</span>
+          <button type="button" class="btn btn-danger btn-sm" onclick="deleteHallAllocation(${i})">Delete</button>
+        </div>
+      `).join('')
+      : '<p style="font-size:12px; color:#9ca3af;">Koi hall mapping nahi hai — sab programs ke liye hall khali rahega jab tak yahan add na karein.</p>';
+  }
+  function addHallAllocation() {
+    if (!guardWrite('datesheet', 'Add hall allocation')) return;
+    const hall = hallAllocName.value.trim();
+    const progs = hallAllocPrograms.value.split(',').map(p => p.trim()).filter(Boolean);
+    if (!hall || !progs.length) { alert('Please enter a Hall Name and at least one Program.'); return; }
+    hallAllocations.push({ hall, programs: progs });
+    hallAllocName.value = '';
+    hallAllocPrograms.value = '';
+    renderHallAllocationList();
+    saveDatesheetGenSettings();
+  }
+  function deleteHallAllocation(i) {
+    if (!guardWrite('datesheet', 'Delete hall allocation')) return;
+    hallAllocations.splice(i, 1);
+    renderHallAllocationList();
+    saveDatesheetGenSettings();
+  }
+  function getHallForProgram(programName) {
+    const match = hallAllocations.find(h => h.programs.includes(programName));
+    return match ? match.hall : 'TBD';
+  }
+  function saveDatesheetGenSettings() {
+    sbUpdate('app_settings', 'main', { hall_allocations: JSON.stringify(hallAllocations) });
+  }
+
+  // ----- Programs checklist -----
+  function populateSdgProgramsGrid() {
+    if (!document.getElementById('sdgProgramsGrid')) return;
+    sdgProgramsGrid.innerHTML = programs.map(p => `
+      <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:#374151;">
+        <input type="checkbox" class="sdgProgramChk" value="${p.name}" checked> ${p.name}
+      </label>
+    `).join('');
+  }
+  function toggleAllSdgPrograms(checked) {
+    document.querySelectorAll('.sdgProgramChk').forEach(c => c.checked = checked);
+  }
+
+  // Faculty currently assigned to a given Program + Course + Semester (from the Timetable) —
+  // used to detect "same teacher, different department" clashes so we don't double-book them.
+  function getFacultyFor(program, courseName, semester) {
+    const entry = timetable.find(t => t.program === program && t.course === courseName && t.semester === semester);
+    return entry ? entry.faculty : '';
+  }
+
+  // Builds each selected program's ordered list of courses for the semester — universal subjects
+  // (Pak Studies, Islamic Studies, etc.) are moved to the FRONT so they naturally land on the same
+  // early dates across every program that has them.
+  function buildProgramCourseQueues(selectedPrograms, semester, universalSubjects) {
+    const queues = {};
+    selectedPrograms.forEach(progName => {
+      const progObj = programs.find(p => p.name === progName);
+      const dept = progObj ? progObj.department : '';
+      const semCourses = courses.filter(c => c.semester === semester && (!dept || c.department === dept));
+      const isUniversal = (name) => universalSubjects.some(u => name.toLowerCase().includes(u.toLowerCase()));
+      const universal = semCourses.filter(c => isUniversal(c.name));
+      const rest = semCourses.filter(c => !isUniversal(c.name));
+      queues[progName] = [...universal, ...rest].map(c => c.name);
+    });
+    return queues;
+  }
+
+  // Core scheduling algorithm: walks day-by-day (skipping Sundays + holidays), giving each program
+  // ONE paper per day from the front of its queue — unless that would double-book a teacher who's
+  // already examining a different program's paper that same day, in which case it's deferred to the
+  // next available day. Universal subjects, being at the front of every queue, naturally align on the
+  // same date(s) for every program that has them.
+  function runMasterScheduler(selectedPrograms, semester, startDate, excludeSet, universalSubjects) {
+    const queues = buildProgramCourseQueues(selectedPrograms, semester, universalSubjects);
+    const days = []; // [{ date: Date, assignments: [{program, course}] }]
+    let cursor = nextValidDate(startDate, excludeSet);
+    let guard = 0; // safety net against infinite loops
+
+    while (Object.values(queues).some(q => q.length) && guard < 200) {
+      guard++;
+      const usedFacultyToday = new Set();
+      const deferred = {};
+      const assignments = [];
+
+      selectedPrograms.forEach(progName => {
+        if (!queues[progName].length) return;
+        const courseName = queues[progName][0];
+        const faculty = getFacultyFor(progName, courseName, semester);
+        if (faculty && usedFacultyToday.has(faculty)) {
+          deferred[progName] = true; // teacher already booked today — push this program to tomorrow
+          return;
+        }
+        if (faculty) usedFacultyToday.add(faculty);
+        assignments.push({ program: progName, course: courseName });
+        queues[progName].shift();
+      });
+
+      if (assignments.length) days.push({ date: cursor, assignments });
+      cursor = nextValidDate(addLocalDays(cursor, 1), excludeSet);
+
+      // Programs deferred purely by faculty clash just keep their course at the front of the
+      // queue automatically (we only .shift()'d the ones actually scheduled today), so nothing
+      // else to do here — the while-loop's next pass will retry them on the next valid date.
+      if (!assignments.length && !Object.keys(deferred).length) break; // nothing left to schedule
+    }
+    return days;
+  }
+
+  // Groups one day's per-program assignments by course name (so e.g. "Pak Studies" for 4 different
+  // programs becomes a single subject-row listing all 4 departments, matching the official layout).
+  function groupDayByCourse(day) {
+    const groups = {};
+    day.assignments.forEach(a => {
+      if (!groups[a.course]) groups[a.course] = [];
+      groups[a.course].push(a.program);
+    });
+    return Object.keys(groups).map(course => ({ course, programs: groups[course] }));
+  }
+
+  function generateSmartDatesheet(allPrograms) {
+    if (!guardWrite('datesheet', 'Generate Smart Date Sheet')) return;
+
+    const semester = parseInt(sdgSemester.value);
+    const startDateStr = sdgStartDate.value;
+    const timeSlot = sdgTimeSlot.value.trim() || '09:00 AM to 12:00 PM';
+    const examTitle = sdgExamTitle.value.trim() || 'Mid Term & Final Term Examination';
+    const session = sdgSession.value.trim();
+    if (!semester || !startDateStr) { alert('Please select Semester and Start Date.'); return; }
+
+    const excludeSet = new Set(
+      sdgExcludeDates.value.split(',').map(s => s.trim()).filter(Boolean)
+    );
+    const universalSubjects = sdgUniversalSubjects.value.split(',').map(s => s.trim()).filter(Boolean);
+
+    const selectedPrograms = allPrograms
+      ? programs.map(p => p.name)
+      : Array.from(document.querySelectorAll('.sdgProgramChk:checked')).map(c => c.value);
+    if (!selectedPrograms.length) { alert('Please select at least one Program.'); return; }
+
+    const days = runMasterScheduler(selectedPrograms, semester, parseLocalDate(startDateStr), excludeSet, universalSubjects);
+    if (!days.length) { alert('No courses found for Semester ' + semester + ' for the selected programs. Add Courses first.'); return; }
+
+    printMasterDatesheet(days, { semester, timeSlot, examTitle, session });
+  }
+
+  function printMasterDatesheet(days, meta) {
+    const collegeName = collegeNameSidebar.innerText;
+    const logoSrc = (collegeLogoImg && collegeLogoImg.src && collegeLogoImg.style.display !== 'none') ? collegeLogoImg.src : '';
+
+    const rowsHTML = days.map(day => {
+      const groups = groupDayByCourse(day);
+      const dateRowspan = groups.reduce((sum, g) => sum + g.programs.length, 0);
+      let dateCell = `<td rowspan="${dateRowspan}" class="dcell"><b>${formatDisplayDate(day.date)}</b><br>${formatDayName(day.date)}</td>`;
+      let firstRow = true;
+      let rows = '';
+
+      groups.forEach(g => {
+        g.programs.forEach((prog, pIdx) => {
+          rows += '<tr>';
+          if (firstRow) { rows += dateCell; firstRow = false; }
+          if (pIdx === 0) rows += `<td rowspan="${g.programs.length}">${g.course}</td>`;
+          rows += `<td>${prog}</td>`;
+          rows += `<td>${getHallForProgram(prog)}</td>`;
+          rows += '</tr>';
+        });
+      });
+      return rows;
+    }).join('');
+
+    const win = window.open('', '_blank');
+    if (!win) { alert('Popup blocked! Please allow popups for this page and try again.'); return; }
+    win.document.write(`
+      <html>
+      <head>
+        <title>Date Sheet - Semester ${meta.semester}</title>
+        <style>
+          @page { size: A4; margin: 12mm; }
+          * { box-sizing:border-box; }
+          body { font-family: Arial, sans-serif; font-size:12px; color:#111; }
+          .letterhead { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:2px; }
+          .letterhead img { max-width:45px; max-height:45px; }
+          table { width:100%; border-collapse:collapse; margin-top:6px; }
+          th, td { border:1.5px solid #333; padding:6px 10px; text-align:center; }
+          .headtable td { border:1.5px solid #333; font-weight:bold; font-size:13px; }
+          .headtable .title { font-size:16px; }
+          .headtable .sub { font-size:13px; font-weight:normal; }
+          th { background:#d9d9d9; font-weight:bold; }
+          .dcell { background:#f2f2f2; }
+        </style>
+      </head>
+      <body>
+        <table class="headtable">
+          <tr><td colspan="4" class="title">${logoSrc ? `<img src="${logoSrc}" style="max-height:36px; vertical-align:middle; margin-right:8px;">` : ''}${collegeName.toUpperCase()}</td></tr>
+          <tr><td colspan="4" class="sub">Date Sheet for BS Program${meta.session ? ', Session ' + meta.session : ''}</td></tr>
+          <tr>
+            <td colspan="2" style="text-align:left;">${meta.examTitle} — Semester ${meta.semester}</td>
+            <td colspan="2" style="text-align:right;">Time: ${meta.timeSlot}</td>
+          </tr>
+        </table>
+        <table>
+          <thead><tr><th>Date &amp; Day</th><th>Course / Subject / Paper</th><th>Department / Discipline</th><th>Allotted Hall</th></tr></thead>
+          <tbody>${rowsHTML}</tbody>
+        </table>
+        <script>window.onload = () => setTimeout(() => window.print(), 300);<\/script>
+      </body>
+      </html>
+    `);
+    win.document.close();
+  }
+
   function renderDatesheet() {
     datesheetTable.innerHTML = datesheet
       .slice()
@@ -5118,6 +5422,12 @@
             const parsedPages = JSON.parse(s.guest_pages);
             if (Array.isArray(parsedPages)) guestSettings.pages = parsedPages;
           } catch (e) { console.warn('Could not parse guest_pages:', e); }
+        }
+        if (s.hall_allocations) {
+          try {
+            const parsedHalls = JSON.parse(s.hall_allocations);
+            if (Array.isArray(parsedHalls)) hallAllocations = parsedHalls;
+          } catch (e) { console.warn('Could not parse hall_allocations:', e); }
         }
         if (s.dashboard_slider) {
           try {
